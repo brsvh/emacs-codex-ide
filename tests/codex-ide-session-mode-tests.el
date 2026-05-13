@@ -176,6 +176,32 @@
       (when (buffer-live-p buffer)
         (kill-buffer buffer)))))
 
+(ert-deftest codex-ide-session-mode-notifies-session-diff-of-point-turn ()
+  (let* ((buffer (generate-new-buffer " *codex-ide-session-diff-point-test*"))
+         (session (make-instance 'codex-ide-session :buffer buffer))
+         notified)
+    (unwind-protect
+        (with-current-buffer buffer
+          (codex-ide-session-mode)
+          (setq-local codex-ide--session session)
+          (let ((inhibit-read-only t))
+            (insert "> first\nresult\n\n> second\nresult\n"))
+          (goto-char (point-min))
+          (let ((first-marker (copy-marker (point) nil)))
+            (search-forward "> second")
+            (let ((second-marker (copy-marker (match-beginning 0) nil)))
+              (codex-ide--record-turn-start session "turn-1" first-marker)
+              (codex-ide--record-turn-start session "turn-2" second-marker)
+              (cl-letf (((symbol-function
+                          'codex-ide-session-diff-transcript-point-changed)
+                         (lambda (notified-session turn-id)
+                           (setq notified
+                                 (list notified-session turn-id)))))
+                (codex-ide-session-mode--notify-diff-point-changed)
+                (should (equal notified (list session "turn-2")))))))
+      (when (buffer-live-p buffer)
+        (kill-buffer buffer)))))
+
 (provide 'codex-ide-session-mode-tests)
 
 ;;; codex-ide-session-mode-tests.el ends here

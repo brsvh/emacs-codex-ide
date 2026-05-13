@@ -438,11 +438,11 @@ while 1 would fully replace the background with the foreground color.")
 ;;; Generated autoloads from codex-ide-session-mode.el
 
 (autoload 'codex-ide-session-mode-nav-forward "codex-ide-session-mode"
-  "Move point to the next focal point in a Codex session buffer." t)
+"Move point to the next focal point in a Codex session buffer." t)
 (autoload 'codex-ide-session-mode-nav-backward "codex-ide-session-mode"
-  "Move point to the previous focal point in a Codex session buffer." t)
+"Move point to the previous focal point in a Codex session buffer." t)
 (autoload 'codex-ide-session-mode "codex-ide-session-mode"
-  "Major mode for Codex app-server session buffers.
+"Major mode for Codex app-server session buffers.
 
 * \\<codex-ide-session-mode-map>\\[codex-ide-submit] submits the active prompt.
 
@@ -487,11 +487,11 @@ penultimate step during initialization." t)
 ;;; Generated autoloads from codex-ide-diff-view.el
 
 (autoload 'codex-ide-session-diff-open "codex-ide-diff-view"
-  "Open or reuse the canonical session diff buffer for SESSION.
+"Open or reuse the canonical session diff buffer for SESSION.
 
 (fn &optional SESSION)" t)
 (autoload 'codex-ide-diff-open-combined-turn-buffer "codex-ide-diff-view"
-  "Open the combined diff for SESSION TURN-ID in a standalone diff buffer.
+"Open the combined diff for SESSION TURN-ID in a standalone diff buffer.
 When called interactively with nil TURN-ID, use the last transcript turn at or
 above point.  Otherwise, when TURN-ID is nil, prefer the running turn and
 otherwise use the most recent completed turn.

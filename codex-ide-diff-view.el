@@ -25,6 +25,7 @@
                   (buffer &optional action))
 (declare-function codex-ide--session-for-current-project "codex-ide-session" ())
 (declare-function codex-ide-session-buffer "codex-ide-core" (session))
+(declare-function codex-ide-session-current-turn-id "codex-ide-core" (session))
 (declare-function codex-ide-session-directory "codex-ide-core" (session))
 (declare-function codex-ide-session-p "codex-ide-core" (object))
 (declare-function codex-ide-diff-data-combined-turn-diff-text
@@ -310,13 +311,22 @@ Return the created buffer."
 (defun codex-ide-session-diff--render (session source turn-id)
   "Render SESSION diff for SOURCE and TURN-ID in the current buffer."
   (let* ((diff-text
-          (condition-case err
-              (codex-ide-diff-data-combined-turn-diff-text session turn-id)
-            (user-error
-             (codex-ide-session-diff--empty-message
-              source
-              turn-id
-              (error-message-string err)))))
+          (if (and (not (eq source 'live))
+                   (not turn-id))
+              (codex-ide-session-diff--empty-message
+               source
+               nil
+               (pcase source
+                 ('transcript "No prompt at transcript position")
+                 ('pinned "No pinned turn selected")
+                 (_ "No turn selected")))
+            (condition-case err
+                (codex-ide-diff-data-combined-turn-diff-text session turn-id)
+              (user-error
+               (codex-ide-session-diff--empty-message
+                source
+                turn-id
+                (error-message-string err))))))
          (directory (and session (codex-ide-session-directory session))))
     (let ((inhibit-read-only t))
       (when directory
@@ -406,15 +416,19 @@ Return the created buffer."
   "Notify SESSION's canonical diff buffer that transcript point is at TURN-ID."
   (when-let* ((buffer (codex-ide-session-diff--buffer-for-session session)))
     (with-current-buffer buffer
-      (when (eq codex-ide-session-diff-source 'transcript)
+      (when (and (eq codex-ide-session-diff-source 'transcript)
+                 (not (equal codex-ide-session-diff--turn-id turn-id)))
         (setq-local codex-ide-session-diff--turn-id turn-id)
         (codex-ide-session-diff-refresh buffer)))))
 
 (defun codex-ide-session-diff-note-session-updated (session)
-  "Refresh SESSION's canonical diff buffer when it is live-following."
+  "Refresh SESSION's canonical diff buffer when its source should update."
   (when-let* ((buffer (codex-ide-session-diff--buffer-for-session session)))
     (with-current-buffer buffer
-      (when (eq codex-ide-session-diff-source 'live)
+      (when (or (eq codex-ide-session-diff-source 'live)
+                (and (eq codex-ide-session-diff-source 'transcript)
+                     (equal codex-ide-session-diff--turn-id
+                            (codex-ide-session-current-turn-id session))))
         (codex-ide-session-diff-refresh buffer)))))
 
 ;;;###autoload

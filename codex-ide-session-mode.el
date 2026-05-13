@@ -25,9 +25,13 @@
 
 (require 'cl-lib)
 (require 'codex-ide-core)
+(require 'codex-ide-diff-data)
 (require 'codex-ide-nav)
 (require 'codex-ide-renderer)
 (require 'imenu)
+
+(autoload 'codex-ide-session-diff-transcript-point-changed
+  "codex-ide-diff-view" nil nil)
 
 (defvar codex-ide-session-enable-visual-line-mode)
 
@@ -81,9 +85,9 @@
   "Return SESSION's editable input end position, if available."
   (setq session (or session (codex-ide--get-default-session-for-current-buffer)))
   (when-let* ((marker (and session
-                          (codex-ide--session-metadata-get
-                           session
-                           :input-end-marker))))
+                           (codex-ide--session-metadata-get
+                            session
+                            :input-end-marker))))
     (let ((buffer (and session (codex-ide-session-buffer session))))
       (when (and (buffer-live-p buffer)
                  (markerp marker)
@@ -117,8 +121,8 @@ SESSION's active editable prompt is excluded because input navigation should
 land at the editable input start rather than on the read-only prompt prefix."
   (let ((active-prompt-start
          (when-let* ((marker (and session
-                                 (codex-ide-session-input-prompt-start-marker
-                                  session))))
+                                  (codex-ide-session-input-prompt-start-marker
+                                   session))))
            (when (and (markerp marker)
                       (eq (marker-buffer marker) (current-buffer)))
              (marker-position marker))))
@@ -270,14 +274,14 @@ This covers inline approval and elicitation regions rendered near the live tail,
 so users can navigate within those controls without opting out of follow mode."
   (setq pos (or pos (point)))
   (when-let* ((start (codex-ide-session-mode--interactive-request-preserve-start
-                     session)))
+                      session)))
     (>= pos start)))
 
 (defun codex-ide-session-mode--track-tail-follow-navigation ()
   "Track whether the selected transcript window has opted out of tail following."
   (when-let* ((window (and (derived-mode-p 'codex-ide-session-mode)
-                          (eq (window-buffer (selected-window)) (current-buffer))
-                          (selected-window))))
+                           (eq (window-buffer (selected-window)) (current-buffer))
+                           (selected-window))))
     (let ((session (and (boundp 'codex-ide--session) codex-ide--session))
           (point-pos (point))
           (window-start-pos (window-start window)))
@@ -291,6 +295,18 @@ so users can navigate within those controls without opting out of follow mode."
               (set-window-parameter window 'codex-ide-tail-follow-suspended t)))))
       (setq codex-ide-session-mode--last-point point-pos
             codex-ide-session-mode--last-window-start window-start-pos))))
+
+(defun codex-ide-session-mode--notify-diff-point-changed ()
+  "Notify the canonical session diff buffer about transcript point movement."
+  (when (derived-mode-p 'codex-ide-session-mode)
+    (when-let* ((session (and (boundp 'codex-ide--session)
+                              codex-ide--session)))
+      (codex-ide-session-diff-transcript-point-changed
+       session
+       (codex-ide-diff-data-turn-id-at-point
+        session
+        (point)
+        (current-buffer))))))
 
 (defun codex-ide-session-mode--handle-theme-change (&rest _args)
   "Refresh session renderer faces after a theme change."
@@ -369,6 +385,10 @@ adds these bindings:
   (add-hook 'post-command-hook #'codex-ide--sync-prompt-minor-mode nil t)
   (add-hook 'post-command-hook
             #'codex-ide-session-mode--track-tail-follow-navigation
+            nil
+            t)
+  (add-hook 'post-command-hook
+            #'codex-ide-session-mode--notify-diff-point-changed
             nil
             t))
 

@@ -261,6 +261,100 @@
       (when (buffer-live-p session-buffer)
         (kill-buffer session-buffer)))))
 
+(ert-deftest codex-ide-session-diff-note-session-updated-refreshes-transcript-current-turn ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-transcript-live]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :current-turn-id "turn-1"
+                                 :directory default-directory))
+         (diff-buffer (get-buffer-create
+                       (codex-ide-session-diff-buffer-name-for-session
+                        session-buffer)))
+         requested-turns)
+    (unwind-protect
+        (progn
+          (with-current-buffer diff-buffer
+            (codex-ide-session-diff-mode)
+            (setq-local codex-ide-session-diff--session session)
+            (setq-local codex-ide-session-diff-source 'transcript)
+            (setq-local codex-ide-session-diff--turn-id "turn-1"))
+          (cl-letf (((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                     (lambda (resolved-session &optional turn-id)
+                       (should (eq resolved-session session))
+                       (push turn-id requested-turns)
+                       "diff --git a/current.txt b/current.txt\n@@ -1 +1 @@\n-old\n+new")))
+            (codex-ide-session-diff-note-session-updated session)
+            (should (equal requested-turns '("turn-1")))
+            (with-current-buffer diff-buffer
+              (should (string-match-p "current\\.txt" (buffer-string))))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
+(ert-deftest codex-ide-session-diff-transcript-point-changed-refreshes-new-turn ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-transcript-refresh]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :directory default-directory))
+         (diff-buffer (get-buffer-create
+                       (codex-ide-session-diff-buffer-name-for-session
+                        session-buffer)))
+         requested-turns)
+    (unwind-protect
+        (progn
+          (with-current-buffer diff-buffer
+            (codex-ide-session-diff-mode)
+            (setq-local codex-ide-session-diff--session session)
+            (setq-local codex-ide-session-diff-source 'transcript)
+            (setq-local codex-ide-session-diff--turn-id "turn-1"))
+          (cl-letf (((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                     (lambda (resolved-session &optional turn-id)
+                       (should (eq resolved-session session))
+                       (push turn-id requested-turns)
+                       (format "diff --git a/%s.txt b/%s.txt\n@@ -1 +1 @@\n-old\n+new"
+                               turn-id
+                               turn-id))))
+            (codex-ide-session-diff-transcript-point-changed session "turn-1")
+            (should-not requested-turns)
+            (codex-ide-session-diff-transcript-point-changed session "turn-2")
+            (should (equal requested-turns '("turn-2")))
+            (with-current-buffer diff-buffer
+              (should (equal codex-ide-session-diff--turn-id "turn-2"))
+              (should (string-match-p "turn-2\\.txt" (buffer-string))))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
+(ert-deftest codex-ide-session-diff-transcript-source-without-turn-shows-empty-state ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-transcript-empty]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :directory default-directory))
+         (diff-buffer (get-buffer-create
+                       (codex-ide-session-diff-buffer-name-for-session
+                        session-buffer))))
+    (unwind-protect
+        (progn
+          (with-current-buffer diff-buffer
+            (codex-ide-session-diff-mode)
+            (setq-local codex-ide-session-diff--session session)
+            (setq-local codex-ide-session-diff-source 'transcript)
+            (setq-local codex-ide-session-diff--turn-id nil))
+          (cl-letf (((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                     (lambda (&rest _)
+                       (error "Transcript mode should not fall back to latest turn"))))
+            (codex-ide-session-diff-refresh diff-buffer))
+          (with-current-buffer diff-buffer
+            (should (string-match-p
+                     "No prompt at transcript position"
+                     (buffer-string)))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
 (ert-deftest codex-ide-diff-open-buffer-errors-without-diff-text ()
   (should-error (codex-ide-diff-open-buffer nil) :type 'user-error)
   (should-error (codex-ide-diff-open-buffer "  \n") :type 'user-error))
