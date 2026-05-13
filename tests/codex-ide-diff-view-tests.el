@@ -11,7 +11,7 @@
 (require 'subr-x)
 (require 'codex-ide)
 
-(ert-deftest codex-ide-diff-open-buffer-displays-diff-mode-buffer ()
+(ert-deftest codex-ide-diff-open-buffer-displays-codex-diff-mode-buffer ()
   (let ((display-call nil)
         diff-buffer)
     (unwind-protect
@@ -32,6 +32,7 @@
           (should (buffer-live-p diff-buffer))
           (should (equal (car display-call) diff-buffer))
           (with-current-buffer diff-buffer
+            (should (eq major-mode 'codex-ide-diff-mode))
             (should (derived-mode-p 'diff-mode))
             (should buffer-read-only)
             (should (string-match-p

@@ -8,10 +8,11 @@
 
 ;; This module owns dedicated diff-buffer presentation for Codex file changes.
 ;;
-;; It turns Codex-provided patch text into a standalone `diff-mode' buffer and
-;; displays that buffer using codex-ide's normal window policy.  Keeping this
-;; separate from transcript control lets the transcript layer stay focused on
-;; when a diff should be offered while this module owns how the diff is shown.
+;; It turns Codex-provided patch text into a standalone `codex-ide-diff-mode'
+;; buffer derived from `diff-mode' and displays that buffer using codex-ide's
+;; normal window policy.  Keeping this separate from transcript control lets the
+;; transcript layer stay focused on when a diff should be offered while this
+;; module owns how the diff is shown.
 
 ;;; Code:
 
@@ -39,6 +40,9 @@
     (define-key map (kbd "<return>") #'codex-ide-diff-goto-source-at-point)
     map)
   "Keymap used in standalone Codex diff buffers.")
+
+(define-derived-mode codex-ide-diff-mode diff-mode "Codex-Diff"
+  "Major mode for standalone Codex diff buffers.")
 
 (defvar codex-ide-diff-inline-body-map
   (let ((map (make-sparse-keymap)))
@@ -216,7 +220,7 @@ DIRECTORY is used to resolve relative diff paths."
     (codex-ide-diff-goto-source diff-text line-index directory)))
 
 (defun codex-ide-diff-open-buffer (diff-text &optional buffer-name directory)
-  "Display DIFF-TEXT in a dedicated `diff-mode' buffer.
+  "Display DIFF-TEXT in a dedicated `codex-ide-diff-mode' buffer.
 When BUFFER-NAME is non-nil, reuse that buffer.
 DIRECTORY is used as the buffer's `default-directory' for source jumps.
 Return the created buffer."
@@ -234,8 +238,7 @@ Return the created buffer."
         (erase-buffer)
         (insert (string-trim-right diff-text))
         (insert "\n")
-        (diff-mode)
-        (use-local-map codex-ide-diff-mode-map)
+        (codex-ide-diff-mode)
         (setq-local buffer-read-only t)
         (set-buffer-modified-p nil)
         (goto-char (point-min))))
