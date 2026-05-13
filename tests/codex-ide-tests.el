@@ -1675,6 +1675,10 @@
              (exitCode . 0)))
           (should (overlay-get overlay 'invisible))
           (should (overlay-get overlay :folded))
+          (should (equal (overlay-get overlay :result-full-text)
+                         "hello\nworld\n"))
+          (should-not (overlay-get overlay :item-result-fallback-text))
+          (should-not (overlay-get overlay :output-fallback-text))
           (should (string-match-p "output: 2 lines \\[expand\\]"
                                   (buffer-string)))
           (should-not (string-match-p "    hello\n    world"
@@ -1890,9 +1894,10 @@
                       (delta . "one\ntwo\nthree\nfour\n")))))
         (goto-char (point-min))
         (search-forward "[full output]")
-        (let ((button (button-at (match-beginning 0))))
+        (let* ((pos (match-beginning 0))
+               (button (button-at pos)))
           (should button)
-          (push-button (match-beginning 0)))
+          (push-button pos))
         (should (string-match-p
                  "\\*codex-output\\[.*:call-1\\]\\*"
                  (buffer-name)))
@@ -1994,7 +1999,15 @@
            (aggregatedOutput . "codex-ide.el:10:needle\ncodex-ide.el:20:needle\ncodex-ide.el:30:needle\ncodex-ide.el:40:needle\n")))
         (goto-char (point-min))
         (search-forward "[full output]")
-        (push-button (match-beginning 0))
+        (let* ((pos (match-beginning 0))
+               (overlay (get-char-property
+                         pos
+                         codex-ide-command-output-overlay-property)))
+          (should (equal (overlay-get overlay :result-full-text)
+                         "codex-ide.el:10:needle\ncodex-ide.el:20:needle\ncodex-ide.el:30:needle\ncodex-ide.el:40:needle\n"))
+          (should-not (overlay-get overlay :item-result-fallback-text))
+          (should-not (overlay-get overlay :output-fallback-text))
+          (push-button pos))
         (should (string-match-p
                  "\\*codex-output\\[.*:call-1\\]\\*"
                  (buffer-name)))
@@ -2168,6 +2181,10 @@
                       (match-beginning 0)
                       codex-ide-command-output-overlay-property)))
         (should (overlayp overlay))
+        (should (equal (overlay-get overlay :result-full-text)
+                       "hello\nworld\n"))
+        (should-not (overlay-get overlay :item-result-fallback-text))
+        (should-not (overlay-get overlay :output-fallback-text))
         (should (overlay-get overlay 'invisible))
         (should-not (string-match-p "    hello\n    world" (buffer-string)))
         (codex-ide-toggle-command-output-at-point (match-beginning 0))
@@ -2205,6 +2222,9 @@
                       (match-beginning 0)
                       codex-ide-item-result-overlay-property)))
         (should (overlayp overlay))
+        (should (equal (overlay-get overlay :result-full-text)
+                       "line 1\nline 2\n"))
+        (should-not (overlay-get overlay :item-result-fallback-text))
         (should (overlay-get overlay 'invisible))
         (should-not (string-match-p "    line 1\n    line 2" (buffer-string)))
         (codex-ide-toggle-item-result-at-point (match-beginning 0))

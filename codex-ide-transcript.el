@@ -2103,6 +2103,19 @@ incrementally for transcript rendering."
   (or (overlay-get overlay :open-function)
       #'codex-ide--open-item-result-overlay))
 
+(defun codex-ide--item-result-state-full-text (state item-type)
+  "Return full result text retained in STATE for ITEM-TYPE."
+  (or (plist-get state :result-full-text)
+      (and (equal item-type "commandExecution")
+           (codex-ide--command-output-state-full-text state))))
+
+(defun codex-ide--item-result-overlay-full-text (overlay)
+  "Return full result text retained by OVERLAY."
+  (or (overlay-get overlay :result-full-text)
+      ;; Defensive fallback for live buffers created before the full-text
+      ;; model was unified. This can be truncated/decorated transcript text.
+      (overlay-get overlay :display-text)))
+
 (defun codex-ide--item-result-text (overlay)
   "Return the full result text for item result OVERLAY."
   (let* ((session (overlay-get overlay :session))
@@ -2110,13 +2123,8 @@ incrementally for transcript rendering."
          (item-type (overlay-get overlay :item-type))
          (state (and session item-id
                      (codex-ide--item-state session item-id))))
-    (or (plist-get state :item-result-text)
-        (and (equal item-type "commandExecution")
-             (codex-ide--command-output-state-full-text state))
-        (plist-get state :output-text)
-        (overlay-get overlay :item-result-fallback-text)
-        (overlay-get overlay :output-fallback-text)
-        (overlay-get overlay :display-text)
+    (or (codex-ide--item-result-state-full-text state item-type)
+        (codex-ide--item-result-overlay-full-text overlay)
         "")))
 
 (defun codex-ide--item-result-buffer-name (overlay)
@@ -2506,12 +2514,12 @@ When OVERLAY is folded, remove the body text from the transcript buffer."
     (when-let* ((overlay (codex-ide--ensure-item-result-block session item-id)))
       (let* ((state (codex-ide--item-state session item-id))
              (state-output-text
-              (or (plist-get state :item-result-text)
-                  (plist-get state :output-text)))
+              (codex-ide--item-result-state-full-text
+               state
+               (plist-get state :type)))
              (state-display-text
-              (plist-get state :item-result-display-text))
-             (previous (or (overlay-get overlay :item-result-fallback-text)
-                           (overlay-get overlay :output-fallback-text)
+              (plist-get state :result-display-text))
+             (previous (or (codex-ide--item-result-overlay-full-text overlay)
                            ""))
              output-text
              display-output-text
@@ -2535,9 +2543,10 @@ When OVERLAY is folded, remove the body text from the transcript buffer."
                   (and truncated
                        (codex-ide--command-output-truncation-notice))
                   ""))
-        (overlay-put overlay :item-result-fallback-text output-text)
-        (when (equal (plist-get state :type) "commandExecution")
-          (overlay-put overlay :output-fallback-text output-text))
+        (setq state (plist-put state :result-full-text output-text))
+        (setq state (plist-put state :result-display-text display-output-text))
+        (codex-ide--put-item-state session item-id state)
+        (overlay-put overlay :result-full-text output-text)
         (let* ((line-count
                 (codex-ide--command-output-line-count display-output-text))
                (visible-line-count
@@ -2607,6 +2616,22 @@ When OVERLAY is folded, remove the body text from the transcript buffer."
        (or (overlay-get overlay :display-text) ""))
       (codex-ide--ensure-active-input-prompt-spacing session))))
 
+(defun codex-ide--persist-result-overlay-state
+    (session item-id &optional full-text)
+  "Persist durable result text for ITEM-ID from SESSION onto its overlay.
+Per-item state is cleared after completion; overlays remain interactive, so the
+full text needed by open buttons must live on the overlay as
+`:result-full-text'."
+  (when-let* ((state (codex-ide--item-state session item-id))
+              (overlay (or (plist-get state :item-result-overlay)
+                           (plist-get state :command-output-overlay))))
+    (when-let* ((text (or full-text
+                          (codex-ide--item-result-state-full-text
+                           state
+                           (plist-get state :type)))))
+      (overlay-put overlay :result-full-text text))
+    overlay))
+
 (defun codex-ide--store-command-output-delta (session item-id delta)
   "Store streamed command output DELTA for ITEM-ID in SESSION."
   (let* ((state (or (codex-ide--item-state session item-id) '()))
@@ -2637,6 +2662,7 @@ When OVERLAY is folded, remove the body text from the transcript buffer."
       (setq state (codex-ide--item-state session item-id)
             overlay (or (plist-get state :item-result-overlay)
                         (plist-get state :command-output-overlay))))
+    (codex-ide--persist-result-overlay-state session item-id output)
     (when (and (overlayp overlay)
                (buffer-live-p (overlay-buffer overlay)))
       (overlay-put overlay :complete t)
@@ -2655,13 +2681,11 @@ When OVERLAY is folded, remove the body text from the transcript buffer."
                    (codex-ide--item-state session item-id))))
     (codex-ide--store-command-output-delta session item-id output)
     (codex-ide--render-command-output-state session item-id))
-  (when-let* ((state (codex-ide--item-state session item-id))
-              (full-text (or (codex-ide--command-output-state-full-text state)
-                             output))
-              (overlay (or (plist-get state :command-output-overlay)
-                           (plist-get state :item-result-overlay))))
-    (overlay-put overlay :output-fallback-text full-text)
-    (overlay-put overlay :item-result-fallback-text full-text))
+  (when-let* ((state (codex-ide--item-state session item-id)))
+    (codex-ide--persist-result-overlay-state
+     session
+     item-id
+     (or (codex-ide--command-output-state-full-text state) output)))
   (codex-ide--complete-item-result-block session item-id output))
 
 (defun codex-ide--item-result-overlay-at-point (&optional pos)
@@ -2956,7 +2980,7 @@ CONTEXT is either nil for ordinary transcript rendering or `approval'."
                (state (copy-tree (or (codex-ide--item-state session item-id) '())))
                (anchor (plist-get state :item-result-anchor-marker))
                (stats (codex-ide--file-change-diff-stats trimmed)))
-          (setq state (plist-put state :item-result-text trimmed))
+          (setq state (plist-put state :result-full-text trimmed))
           (setq state (plist-put state :item-result-label "diff"))
           (setq state (plist-put state :item-result-initial-folded
                                  (codex-ide--file-change-diff-folded-p trimmed)))
@@ -2993,7 +3017,7 @@ CONTEXT is either nil for ordinary transcript rendering or `approval'."
                          (codex-ide-diff-buffer-name-for-session buffer))
             (overlay-put overlay :directory
                          (codex-ide-session-directory session))
-            (overlay-put overlay :item-result-fallback-text trimmed)
+            (overlay-put overlay :result-full-text trimmed)
             (overlay-put overlay :display-text trimmed)
             (overlay-put overlay :line-count (plist-get stats :line-count))
             (overlay-put overlay :visible-line-count (plist-get stats :line-count))
@@ -3348,8 +3372,8 @@ CONTEXT is either nil for ordinary transcript rendering or `approval'."
               session
               item-id
               (plist-put
-               (plist-put state :item-result-text result-text)
-               :item-result-display-text display-text)))
+               (plist-put state :result-full-text result-text)
+               :result-display-text display-text)))
            (codex-ide--complete-item-result-block session item-id result-text))
          (when-let* ((error-info (alist-get 'error item)))
            (codex-ide--append-agent-text
