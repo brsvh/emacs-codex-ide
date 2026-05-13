@@ -4472,7 +4472,8 @@ Signal an error when THREAD-READ lacks replayable transcript items."
                (codex-ide-session-current-message-start-marker session) nil
                (codex-ide-session-item-states session) (make-hash-table :test 'equal))
          (codex-ide--record-pending-turn-start session turn-id)
-         (codex-ide--mark-current-turn-diff-started session turn-id))
+         (codex-ide--mark-current-turn-diff-started session turn-id)
+         (codex-ide-session-diff-note-session-updated session))
        (codex-ide--set-session-status session "running" 'turn-started)
        (codex-ide--session-metadata-put
         session
@@ -4502,7 +4503,8 @@ Signal an error when THREAD-READ lacks replayable transcript items."
            (codex-ide--put-current-turn-file-change
             session
             (alist-get 'id item)
-            item))
+            item)
+           (codex-ide-session-diff-note-session-updated session))
          (codex-ide--render-item-start session item)))
       ("item/agentMessage/delta"
        (let ((item-id (alist-get 'itemId params))
@@ -4561,7 +4563,8 @@ Signal an error when THREAD-READ lacks replayable transcript items."
             (plist-put state :diff-text
                        (concat (or (plist-get state :diff-text) "") delta))))
          (unless (string-empty-p delta)
-           (codex-ide--put-current-turn-file-change session item-id nil delta))))
+           (codex-ide--put-current-turn-file-change session item-id nil delta)
+           (codex-ide-session-diff-note-session-updated session))))
       ("item/plan/delta"
        (when codex-ide-log-stream-deltas
          (codex-ide-log-message
@@ -4592,7 +4595,8 @@ Signal an error when THREAD-READ lacks replayable transcript items."
            (codex-ide--put-current-turn-file-change
             session
             (alist-get 'id item)
-            item))
+            item)
+           (codex-ide-session-diff-note-session-updated session))
          (codex-ide--render-item-completion session item)))
       ("turn/completed"
        (let ((interrupted (codex-ide-session-interrupt-requested session))
@@ -4604,6 +4608,7 @@ Signal an error when THREAD-READ lacks replayable transcript items."
          (if turn-id
              (progn
                (codex-ide--mark-current-turn-diff-completed session)
+               (codex-ide-session-diff-note-session-updated session)
                (when interrupted
                  (codex-ide-log-message session "Turn completed after interrupt request"))
                (codex-ide--finish-turn

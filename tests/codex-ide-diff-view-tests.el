@@ -160,6 +160,107 @@
   (should (equal (codex-ide-diff-buffer-name-for-session "*codex[my-project]*")
                  "*codex[my-project]*-diff")))
 
+(ert-deftest codex-ide-session-diff-buffer-name-for-session-appends-session-suffix ()
+  (should (equal (codex-ide-session-diff-buffer-name-for-session
+                  "*codex[my-project]*")
+                 "*codex[my-project]*-session-diff")))
+
+(ert-deftest codex-ide-session-diff-open-uses-canonical-mode-and-live-source ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-session-diff]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :directory default-directory))
+         (display-call nil)
+         diff-buffer)
+    (unwind-protect
+        (cl-letf (((symbol-function 'codex-ide--session-for-current-project)
+                   (lambda () session))
+                  ((symbol-function 'codex-ide-display-buffer)
+                   (lambda (buffer &optional action)
+                     (setq display-call (list buffer action))
+                     nil))
+                  ((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                   (lambda (resolved-session &optional turn-id)
+                     (should (eq resolved-session session))
+                     (should-not turn-id)
+                     "diff --git a/foo.txt b/foo.txt\n@@ -1 +1 @@\n-old\n+new")))
+          (setq diff-buffer (codex-ide-session-diff-open))
+          (should (buffer-live-p diff-buffer))
+          (should (eq (car display-call) diff-buffer))
+          (should (equal (buffer-name diff-buffer)
+                         "*codex[test-session-diff]*-session-diff"))
+          (with-current-buffer diff-buffer
+            (should (eq major-mode 'codex-ide-session-diff-mode))
+            (should (derived-mode-p 'codex-ide-diff-mode))
+            (should (eq codex-ide-session-diff--session session))
+            (should (eq codex-ide-session-diff-source 'live))
+            (should (string-match-p "foo\\.txt" (buffer-string)))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
+(ert-deftest codex-ide-session-diff-note-session-updated-refreshes-live-buffer ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-live-refresh]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :directory default-directory))
+         (diff-buffer (get-buffer-create
+                       (codex-ide-session-diff-buffer-name-for-session
+                        session-buffer)))
+         (diff-text "diff --git a/one.txt b/one.txt\n@@ -1 +1 @@\n-old\n+new"))
+    (unwind-protect
+        (progn
+          (with-current-buffer diff-buffer
+            (codex-ide-session-diff-mode)
+            (setq-local codex-ide-session-diff--session session)
+            (setq-local codex-ide-session-diff-source 'live))
+          (cl-letf (((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                     (lambda (resolved-session &optional turn-id)
+                       (should (eq resolved-session session))
+                       (should-not turn-id)
+                       diff-text)))
+            (codex-ide-session-diff-note-session-updated session)
+            (with-current-buffer diff-buffer
+              (should (string-match-p "one\\.txt" (buffer-string))))
+            (setq diff-text
+                  "diff --git a/two.txt b/two.txt\n@@ -1 +1 @@\n-old\n+new")
+            (codex-ide-session-diff-note-session-updated session)
+            (with-current-buffer diff-buffer
+              (should (string-match-p "two\\.txt" (buffer-string)))
+              (should-not (string-match-p "one\\.txt" (buffer-string))))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
+(ert-deftest codex-ide-session-diff-note-session-updated-ignores-pinned-buffer ()
+  (let* ((session-buffer (generate-new-buffer "*codex[test-pinned-refresh]*"))
+         (session (make-instance 'codex-ide-session
+                                 :buffer session-buffer
+                                 :directory default-directory))
+         (diff-buffer (get-buffer-create
+                       (codex-ide-session-diff-buffer-name-for-session
+                        session-buffer))))
+    (unwind-protect
+        (progn
+          (with-current-buffer diff-buffer
+            (codex-ide-session-diff-mode)
+            (setq-local codex-ide-session-diff--session session)
+            (setq-local codex-ide-session-diff-source 'pinned)
+            (let ((inhibit-read-only t))
+              (insert "original\n")))
+          (cl-letf (((symbol-function 'codex-ide-diff-data-combined-turn-diff-text)
+                     (lambda (&rest _)
+                       (error "Pinned buffers should not live-refresh"))))
+            (codex-ide-session-diff-note-session-updated session))
+          (with-current-buffer diff-buffer
+            (should (equal (buffer-string) "original\n"))))
+      (when (buffer-live-p diff-buffer)
+        (kill-buffer diff-buffer))
+      (when (buffer-live-p session-buffer)
+        (kill-buffer session-buffer)))))
+
 (ert-deftest codex-ide-diff-open-buffer-errors-without-diff-text ()
   (should-error (codex-ide-diff-open-buffer nil) :type 'user-error)
   (should-error (codex-ide-diff-open-buffer "  \n") :type 'user-error))

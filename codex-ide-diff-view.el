@@ -26,6 +26,7 @@
 (declare-function codex-ide--session-for-current-project "codex-ide-session" ())
 (declare-function codex-ide-session-buffer "codex-ide-core" (session))
 (declare-function codex-ide-session-directory "codex-ide-core" (session))
+(declare-function codex-ide-session-p "codex-ide-core" (object))
 (declare-function codex-ide-diff-data-combined-turn-diff-text
                   "codex-ide-diff-data" (session &optional turn-id))
 (declare-function codex-ide-diff-data-turn-id-at-point
@@ -43,6 +44,32 @@
 
 (define-derived-mode codex-ide-diff-mode diff-mode "Codex-Diff"
   "Major mode for standalone Codex diff buffers.")
+
+(defvar-local codex-ide-session-diff--session nil
+  "Codex session associated with the current session diff buffer.")
+
+(defvar-local codex-ide-session-diff-source 'live
+  "Diff source shown by the current session diff buffer.
+The value is one of `live', `transcript', or `pinned'.")
+
+(defvar-local codex-ide-session-diff--turn-id nil
+  "Turn id selected by the current session diff buffer, when any.")
+
+(defvar codex-ide-session-diff-mode-map
+  (let ((map (make-sparse-keymap)))
+    (set-keymap-parent map codex-ide-diff-mode-map)
+    (define-key map (kbd "g") #'codex-ide-session-diff-refresh)
+    (define-key map (kbd "l") #'codex-ide-session-diff-follow-live)
+    (define-key map (kbd "t") #'codex-ide-session-diff-follow-transcript)
+    (define-key map (kbd "p") #'codex-ide-session-diff-pin-current-turn)
+    map)
+  "Keymap used in canonical Codex session diff buffers.")
+
+(define-derived-mode codex-ide-session-diff-mode codex-ide-diff-mode
+  "Codex-Session-Diff"
+  "Major mode for a canonical Codex session diff buffer."
+  (setq-local mode-line-process
+              '("[" (:eval (symbol-name codex-ide-session-diff-source)) "]")))
 
 (defvar codex-ide-diff-inline-body-map
   (let ((map (make-sparse-keymap)))
@@ -88,6 +115,13 @@
 (defun codex-ide-diff-combined-buffer-name-for-session (session-buffer)
   "Return the combined-turn diff buffer name for SESSION-BUFFER."
   (format "%s-turn-diff"
+          (if (bufferp session-buffer)
+              (buffer-name session-buffer)
+            session-buffer)))
+
+(defun codex-ide-session-diff-buffer-name-for-session (session-buffer)
+  "Return the canonical session diff buffer name for SESSION-BUFFER."
+  (format "%s-session-diff"
           (if (bufferp session-buffer)
               (buffer-name session-buffer)
             session-buffer)))
@@ -246,6 +280,142 @@ Return the created buffer."
      buffer
      codex-ide--display-buffer-other-window-pop-up-action)
     buffer))
+
+(defun codex-ide-session-diff--empty-message (source turn-id message)
+  "Return empty-state text for SOURCE TURN-ID and MESSAGE."
+  (string-join
+   (delq nil
+         (list (format "# Codex session diff: %s" source)
+               (and turn-id (format "# Turn: %s" turn-id))
+               (format "# %s" message)))
+   "\n"))
+
+(defun codex-ide-session-diff--target-turn-id (source)
+  "Return the turn id to render under SOURCE."
+  (pcase source
+    ('live nil)
+    ((or 'transcript 'pinned) codex-ide-session-diff--turn-id)
+    (_ nil)))
+
+(defun codex-ide-session-diff--session-buffer-turn-id (session)
+  "Return SESSION's turn id at point in its session buffer, if any."
+  (when-let* ((session-buffer (and session (codex-ide-session-buffer session))))
+    (when (buffer-live-p session-buffer)
+      (with-current-buffer session-buffer
+        (codex-ide-diff-data-turn-id-at-point
+         session
+         (point)
+         session-buffer)))))
+
+(defun codex-ide-session-diff--render (session source turn-id)
+  "Render SESSION diff for SOURCE and TURN-ID in the current buffer."
+  (let* ((diff-text
+          (condition-case err
+              (codex-ide-diff-data-combined-turn-diff-text session turn-id)
+            (user-error
+             (codex-ide-session-diff--empty-message
+              source
+              turn-id
+              (error-message-string err)))))
+         (directory (and session (codex-ide-session-directory session))))
+    (let ((inhibit-read-only t))
+      (when directory
+        (setq-local default-directory (file-name-as-directory directory)))
+      (erase-buffer)
+      (insert (string-trim-right diff-text))
+      (insert "\n")
+      (setq-local buffer-read-only t)
+      (set-buffer-modified-p nil)
+      (goto-char (point-min)))))
+
+(defun codex-ide-session-diff-refresh (&optional buffer)
+  "Refresh BUFFER, or the current canonical session diff buffer."
+  (interactive)
+  (let ((buffer (or buffer (current-buffer))))
+    (with-current-buffer buffer
+      (unless (eq major-mode 'codex-ide-session-diff-mode)
+        (user-error "Not in a Codex session diff buffer"))
+      (unless (codex-ide-session-p codex-ide-session-diff--session)
+        (user-error "No Codex session associated with this diff buffer"))
+      (codex-ide-session-diff--render
+       codex-ide-session-diff--session
+       codex-ide-session-diff-source
+       (codex-ide-session-diff--target-turn-id
+        codex-ide-session-diff-source)))))
+
+(defun codex-ide-session-diff--buffer-for-session (session)
+  "Return the existing canonical diff buffer for SESSION, if any."
+  (when-let* ((session-buffer (and session (codex-ide-session-buffer session))))
+    (get-buffer (codex-ide-session-diff-buffer-name-for-session
+                 session-buffer))))
+
+;;;###autoload
+(defun codex-ide-session-diff-open (&optional session)
+  "Open or reuse the canonical session diff buffer for SESSION."
+  (interactive)
+  (let* ((session (or session (codex-ide--session-for-current-project)))
+         (session-buffer (and session (codex-ide-session-buffer session))))
+    (unless session
+      (user-error "No Codex session available"))
+    (let ((buffer (get-buffer-create
+                   (codex-ide-session-diff-buffer-name-for-session
+                    (or session-buffer "*codex*")))))
+      (with-current-buffer buffer
+        (unless (eq major-mode 'codex-ide-session-diff-mode)
+          (codex-ide-session-diff-mode))
+        (setq-local codex-ide-session-diff--session session)
+        (setq-local codex-ide-session-diff-source
+                    (or codex-ide-session-diff-source 'live))
+        (codex-ide-session-diff-refresh buffer))
+      (codex-ide-display-buffer
+       buffer
+       codex-ide--display-buffer-other-window-pop-up-action)
+      buffer)))
+
+(defun codex-ide-session-diff-follow-live ()
+  "Show the latest or currently running turn in this session diff buffer."
+  (interactive)
+  (setq-local codex-ide-session-diff-source 'live)
+  (setq-local codex-ide-session-diff--turn-id nil)
+  (codex-ide-session-diff-refresh))
+
+(defun codex-ide-session-diff-follow-transcript (&optional turn-id)
+  "Show TURN-ID in this session diff buffer and follow transcript selection."
+  (interactive)
+  (setq-local codex-ide-session-diff-source 'transcript)
+  (setq-local codex-ide-session-diff--turn-id
+              (or turn-id
+                  (codex-ide-session-diff--session-buffer-turn-id
+                   codex-ide-session-diff--session)
+                  codex-ide-session-diff--turn-id))
+  (codex-ide-session-diff-refresh))
+
+(defun codex-ide-session-diff-pin-current-turn (&optional turn-id)
+  "Pin this session diff buffer to TURN-ID."
+  (interactive)
+  (setq-local codex-ide-session-diff-source 'pinned)
+  (setq-local codex-ide-session-diff--turn-id
+              (or turn-id
+                  (codex-ide-session-diff--session-buffer-turn-id
+                   codex-ide-session-diff--session)
+                  codex-ide-session-diff--turn-id))
+  (codex-ide-session-diff-refresh))
+
+(defun codex-ide-session-diff-transcript-point-changed
+    (session turn-id)
+  "Notify SESSION's canonical diff buffer that transcript point is at TURN-ID."
+  (when-let* ((buffer (codex-ide-session-diff--buffer-for-session session)))
+    (with-current-buffer buffer
+      (when (eq codex-ide-session-diff-source 'transcript)
+        (setq-local codex-ide-session-diff--turn-id turn-id)
+        (codex-ide-session-diff-refresh buffer)))))
+
+(defun codex-ide-session-diff-note-session-updated (session)
+  "Refresh SESSION's canonical diff buffer when it is live-following."
+  (when-let* ((buffer (codex-ide-session-diff--buffer-for-session session)))
+    (with-current-buffer buffer
+      (when (eq codex-ide-session-diff-source 'live)
+        (codex-ide-session-diff-refresh buffer)))))
 
 ;;;###autoload
 (defun codex-ide-diff-open-combined-turn-buffer (&optional session turn-id)
