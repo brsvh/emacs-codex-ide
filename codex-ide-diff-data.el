@@ -126,6 +126,15 @@
           path)
     path))
 
+(defun codex-ide--file-change-wrap-headerless-diff (path diff)
+  "Return DIFF wrapped with standard file headers for PATH."
+  (string-join
+   (list (format "diff --git a/%s b/%s" path path)
+         (format "--- a/%s" path)
+         (format "+++ b/%s" path)
+         diff)
+   "\n"))
+
 (defun codex-ide--file-change-diff-text (item)
   "Extract a human-readable diff string from file-change ITEM."
   (let ((item-diff
@@ -159,7 +168,9 @@
                                (not (codex-ide--diff-text-has-file-header-p
                                      normalized-diff
                                      display-path)))
-                          (format "diff -- %s\n%s" display-path normalized-diff)
+                          (codex-ide--file-change-wrap-headerless-diff
+                           display-path
+                           normalized-diff)
                         normalized-diff)))))
               (or (alist-get 'changes item) '())))
        "\n")))))

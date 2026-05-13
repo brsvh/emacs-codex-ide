@@ -88,6 +88,20 @@
     (should (equal (codex-ide-diff--source-location-for-line diff-text 7)
                    '(:path "bar.txt" :line 12)))))
 
+(ert-deftest codex-ide-diff-source-location-resolves-normalized-headerless-patch ()
+  (let* ((item `((type . "fileChange")
+                 (changes . (((path . "foo.txt")
+                              (diff . ,(string-join
+                                        '("@@ -3,2 +3,3 @@"
+                                          " context"
+                                          "+new")
+                                        "\n")))))))
+         (diff-text (codex-ide--file-change-diff-text item)))
+    (should (equal (codex-ide-diff--source-location-for-line diff-text 4)
+                   '(:path "foo.txt" :line 3)))
+    (should (equal (codex-ide-diff--source-location-for-line diff-text 5)
+                   '(:path "foo.txt" :line 4)))))
+
 (ert-deftest codex-ide-diff-open-buffer-reuses-explicit-buffer-name ()
   (let ((display-calls nil)
         (buffer-name "*codex[my-project]*-diff")

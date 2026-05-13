@@ -113,6 +113,25 @@
     (should (equal (codex-ide--file-change-diff-text item)
                    diff-text))))
 
+(ert-deftest codex-ide-file-change-diff-text-wraps-headerless-patch-as-git-diff ()
+  (let* ((patch-text (string-join
+                      '("@@ -3,2 +3,3 @@"
+                        " context"
+                        "+new")
+                      "\n"))
+         (item `((type . "fileChange")
+                 (changes . (((path . "foo.txt")
+                              (diff . ,patch-text)))))))
+    (should (equal (codex-ide--file-change-diff-text item)
+                   (string-join
+                    '("diff --git a/foo.txt b/foo.txt"
+                      "--- a/foo.txt"
+                      "+++ b/foo.txt"
+                      "@@ -3,2 +3,3 @@"
+                      " context"
+                      "+new")
+                    "\n")))))
+
 (ert-deftest codex-ide-turn-file-change-diff-texts-normalizes-historical-items ()
   (let* ((diff-1 (string-join
                   '("diff --git a/foo.txt b/foo.txt"

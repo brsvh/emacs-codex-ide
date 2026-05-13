@@ -102,80 +102,80 @@ Toggle `codex-ide-logging-enabled' interactively." t)
 
 ;;; Generated autoloads from codex-ide-mcp-bridge.el
 
-(defvar codex-ide-enable-emacs-tool-bridge nil "\
-Whether codex-ide should expose Emacs tools to Codex via MCP.
+(defvar codex-ide-enable-emacs-tool-bridge nil
+"Whether codex-ide should expose Emacs tools to Codex via MCP.
 
 When non-nil, codex-ide starts an MCP bridge server alongside `codex app-server'
 and ensures the current Emacs instance is reachable via `emacsclient'.")
 (custom-autoload 'codex-ide-enable-emacs-tool-bridge "codex-ide-mcp-bridge" t)
-(defvar codex-ide-want-mcp-bridge 'prompt "\
-Whether codex-ide should start the Emacs MCP bridge.
+(defvar codex-ide-want-mcp-bridge 'prompt
+"Whether codex-ide should start the Emacs MCP bridge.
 
 When nil, do not start the bridge.  When t, start the bridge without prompting.
 When `prompt', ask before enabling the bridge, matching the historical startup
 behavior.")
 (custom-autoload 'codex-ide-want-mcp-bridge "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-tool-bridge-name "codex-ide-emacs-mcp" "\
-Name used when registering the Emacs MCP bridge with Codex.")
+(defvar codex-ide-emacs-tool-bridge-name "codex-ide-emacs-mcp"
+"Name used when registering the Emacs MCP bridge with Codex.")
 (custom-autoload 'codex-ide-emacs-tool-bridge-name "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-python-command "python3" "\
-Python executable used to launch the standalone Emacs MCP bridge.")
+(defvar codex-ide-emacs-bridge-python-command "python3"
+"Python executable used to launch the standalone Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-python-command "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-emacsclient-command "emacsclient" "\
-Path to the `emacsclient' executable used by the bridge.")
+(defvar codex-ide-emacs-bridge-emacsclient-command "emacsclient"
+"Path to the `emacsclient' executable used by the bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-emacsclient-command "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-script-path nil "\
-Path to the standalone Emacs MCP bridge script.
+(defvar codex-ide-emacs-bridge-script-path nil
+"Path to the standalone Emacs MCP bridge script.
 
 When nil, codex-ide uses `bin/codex-ide-mcp-server.py' from the package directory.")
 (custom-autoload 'codex-ide-emacs-bridge-script-path "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-server-name nil "\
-Server name the bridge should use with `emacsclient'.
+(defvar codex-ide-emacs-bridge-server-name nil
+"Server name the bridge should use with `emacsclient'.
 
 When nil, use the current value of `server-name'.")
 (custom-autoload 'codex-ide-emacs-bridge-server-name "codex-ide-mcp-bridge" t)
-(defvar codex-ide-suppress-server-start-prompts nil "\
-When non-nil, start the Emacs server for the bridge without prompting.
+(defvar codex-ide-suppress-server-start-prompts nil
+"When non-nil, start the Emacs server for the bridge without prompting.
 
 This only affects explicit calls to `codex-ide-mcp-bridge-ensure-server'.  Session
 startup now prompts once about enabling the Emacs tool bridge, and enabling the
 bridge starts the Emacs server automatically when needed.")
 (custom-autoload 'codex-ide-suppress-server-start-prompts "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-startup-timeout 10 "\
-Startup timeout in seconds for the Emacs MCP bridge.")
+(defvar codex-ide-emacs-bridge-startup-timeout 10
+"Startup timeout in seconds for the Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-startup-timeout "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-tool-timeout 60 "\
-Tool-call timeout in seconds for the Emacs MCP bridge.")
+(defvar codex-ide-emacs-bridge-tool-timeout 60
+"Tool-call timeout in seconds for the Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-tool-timeout "codex-ide-mcp-bridge" t)
-(defvar codex-ide-emacs-bridge-require-approval nil "\
-Whether Emacs MCP bridge tool calls should require user approval.
+(defvar codex-ide-emacs-bridge-require-approval nil
+"Whether Emacs MCP bridge tool calls should require user approval.
 
 When nil, `codex-ide' auto-accepts approval-like MCP elicitations that clearly
 refer to the configured Emacs MCP bridge server or one of its tools.")
 (custom-autoload 'codex-ide-emacs-bridge-require-approval "codex-ide-mcp-bridge" t)
-(autoload 'codex-ide-mcp-bridge-request-exempt-from-approval-p "codex-ide-mcp-bridge" "\
-Return non-nil when PARAMS describe an Emacs MCP bridge request.
+(autoload 'codex-ide-mcp-bridge-request-exempt-from-approval-p "codex-ide-mcp-bridge"
+"Return non-nil when PARAMS describe an Emacs MCP bridge request.
 
 This is used to bypass bridge-originated elicitation prompts when
 `codex-ide-emacs-bridge-require-approval' is nil.
 
 (fn PARAMS)")
-(autoload 'codex-ide-mcp-bridge-enabled-p "codex-ide-mcp-bridge" "\
-Return non-nil when the Emacs MCP bridge should be enabled.")
-(autoload 'codex-ide-mcp-bridge-enable "codex-ide-mcp-bridge" "\
-Enable the Emacs MCP bridge and ensure the target Emacs server is running.")
-(autoload 'codex-ide-mcp-bridge-disable "codex-ide-mcp-bridge" "\
-Disable the Emacs MCP bridge.")
-(autoload 'codex-ide-mcp-bridge-prompt-to-enable "codex-ide-mcp-bridge" "\
-Prompt once to enable the Emacs MCP bridge for session startup.")
-(autoload 'codex-ide-mcp-bridge-status "codex-ide-mcp-bridge" "\
-Return an alist describing the current Emacs bridge configuration.")
-(autoload 'codex-ide-mcp-bridge-ensure-server "codex-ide-mcp-bridge" "\
-Ensure the target Emacs server for the bridge is running.")
-(autoload 'codex-ide-mcp-bridge-mcp-config-args "codex-ide-mcp-bridge" "\
-Return `codex app-server' CLI args that register the Emacs MCP bridge.")
-(autoload 'codex-ide-mcp-bridge--json-tool-call "codex-ide-mcp-bridge" "\
-Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
+(autoload 'codex-ide-mcp-bridge-enabled-p "codex-ide-mcp-bridge"
+"Return non-nil when the Emacs MCP bridge should be enabled.")
+(autoload 'codex-ide-mcp-bridge-enable "codex-ide-mcp-bridge"
+"Enable the Emacs MCP bridge and ensure the target Emacs server is running.")
+(autoload 'codex-ide-mcp-bridge-disable "codex-ide-mcp-bridge"
+"Disable the Emacs MCP bridge.")
+(autoload 'codex-ide-mcp-bridge-prompt-to-enable "codex-ide-mcp-bridge"
+"Prompt once to enable the Emacs MCP bridge for session startup.")
+(autoload 'codex-ide-mcp-bridge-status "codex-ide-mcp-bridge"
+"Return an alist describing the current Emacs bridge configuration.")
+(autoload 'codex-ide-mcp-bridge-ensure-server "codex-ide-mcp-bridge"
+"Ensure the target Emacs server for the bridge is running.")
+(autoload 'codex-ide-mcp-bridge-mcp-config-args "codex-ide-mcp-bridge"
+"Return `codex app-server' CLI args that register the Emacs MCP bridge.")
+(autoload 'codex-ide-mcp-bridge--json-tool-call "codex-ide-mcp-bridge"
+"Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 
 (fn PAYLOAD)")
 (register-definition-prefixes "codex-ide-mcp-bridge" '("codex-ide-mcp-bridge--"))
@@ -183,18 +183,9 @@ Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 
 ;;; Generated autoloads from codex-ide-transient.el
 
-(autoload 'codex-ide-menu "codex-ide-transient" "\
-Open the main Codex IDE menu.
-
-(fn)" t)
-(autoload 'codex-ide-config-menu "codex-ide-transient" "\
-Open the Codex IDE configuration menu.
-
-(fn)" t)
-(autoload 'codex-ide-debug-menu "codex-ide-transient" "\
-Open a small debug/status menu for Codex IDE.
-
-(fn)" t)
+(autoload 'codex-ide-menu "codex-ide-transient" nil t)
+(autoload 'codex-ide-config-menu "codex-ide-transient" nil t)
+(autoload 'codex-ide-debug-menu "codex-ide-transient" nil t)
 (register-definition-prefixes "codex-ide-transient" '("codex-ide--"))
 
 
@@ -280,8 +271,8 @@ Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 
 ;;; Generated autoloads from codex-ide-session-buffer-list.el
 
-(autoload 'codex-ide-session-buffer-list "codex-ide-session-buffer-list" "\
-Show a tabulated list of live Codex session buffers." t)
+(autoload 'codex-ide-session-buffer-list "codex-ide-session-buffer-list"
+"Show a tabulated list of live Codex session buffers." t)
 (register-definition-prefixes "codex-ide-session-buffer-list" '("codex-ide-session-buffer-list-"))
 
 
@@ -292,8 +283,8 @@ Show a tabulated list of live Codex session buffers." t)
 
 ;;; Generated autoloads from codex-ide-delete-session-thread.el
 
-(autoload 'codex-ide-delete-session-thread "codex-ide-delete-session-thread" "\
-Delete Codex THREAD-ID from the active `CODEX_HOME`.
+(autoload 'codex-ide-delete-session-thread "codex-ide-delete-session-thread"
+"Delete Codex THREAD-ID from the active `CODEX_HOME`.
 
 This command relies on current Codex internal storage details under
 `CODEX_HOME`, specifically the persisted rollout files under the sessions
@@ -324,8 +315,8 @@ for batch callers that already presented a single confirmation.
 
 ;;; Generated autoloads from codex-ide-debug-info.el
 
-(autoload 'codex-ide-show-debug-info "codex-ide-debug-info" "\
-Show a minibuffer summary of live Codex IDE session state." t)
+(autoload 'codex-ide-show-debug-info "codex-ide-debug-info"
+"Show a minibuffer summary of live Codex IDE session state." t)
 (register-definition-prefixes "codex-ide-debug-info" '("codex-ide-debug-info--"))
 
 
@@ -336,14 +327,14 @@ Show a minibuffer summary of live Codex IDE session state." t)
 
 ;;; Generated autoloads from codex-ide-status-mode.el
 
-(defvar codex-ide-status-mode-transcript-preview-max-lines 40 "\
-Maximum number of transcript lines shown in expanded buffer sections.")
+(defvar codex-ide-status-mode-transcript-preview-max-lines 40
+"Maximum number of transcript lines shown in expanded buffer sections.")
 (custom-autoload 'codex-ide-status-mode-transcript-preview-max-lines "codex-ide-status-mode" t)
-(defvar codex-ide-status-mode-auto-refresh-delay 0.1 "\
-Idle delay in seconds before status buffers auto-refresh after session events.")
+(defvar codex-ide-status-mode-auto-refresh-delay 0.1
+"Idle delay in seconds before status buffers auto-refresh after session events.")
 (custom-autoload 'codex-ide-status-mode-auto-refresh-delay "codex-ide-status-mode" t)
-(defvar codex-ide-status-mode-stripe-mix 0.12 "\
-How strongly status header striping blends toward the default foreground.
+(defvar codex-ide-status-mode-stripe-mix 0.12
+"How strongly status header striping blends toward the default foreground.
 
 This controls the subtle alternating background used for every other session
 header in `codex-ide-status-mode'.  The stripe color is computed by blending
@@ -353,29 +344,29 @@ Smaller values produce a subtler stripe with lower contrast.  Larger values
 produce a more visible stripe.  A value of 0 disables the effect entirely,
 while 1 would fully replace the background with the foreground color.")
 (custom-autoload 'codex-ide-status-mode-stripe-mix "codex-ide-status-mode" t)
-(autoload 'codex-ide-status-mode-nav-forward "codex-ide-status-mode" "\
-Move point to the next focal point in a Codex status buffer." t)
-(autoload 'codex-ide-status-mode-nav-backward "codex-ide-status-mode" "\
-Move point to the previous focal point in a Codex status buffer." t)
-(autoload 'codex-ide-status-mode-refresh "codex-ide-status-mode" "\
-Refresh the current Codex status buffer.
+(autoload 'codex-ide-status-mode-nav-forward "codex-ide-status-mode"
+"Move point to the next focal point in a Codex status buffer." t)
+(autoload 'codex-ide-status-mode-nav-backward "codex-ide-status-mode"
+"Move point to the previous focal point in a Codex status buffer." t)
+(autoload 'codex-ide-status-mode-refresh "codex-ide-status-mode"
+"Refresh the current Codex status buffer.
 
 (fn &optional IGNORE-AUTO NOCONFIRM)" t)
-(autoload 'codex-ide-status "codex-ide-status-mode" "\
-Show the Codex status buffer for the current project." t)
+(autoload 'codex-ide-status "codex-ide-status-mode"
+"Show the Codex status buffer for the current project." t)
 (register-definition-prefixes "codex-ide-status-mode" '("codex-ide-status-mode"))
 
 
 ;;; Generated autoloads from codex-ide-nav.el
 
-(autoload 'codex-ide-nav-button-forward "codex-ide-nav" "\
-Move to the next focal point from a Codex-owned button." t)
-(autoload 'codex-ide-nav-button-backward "codex-ide-nav" "\
-Move to the previous focal point from a Codex-owned button." t)
-(autoload 'codex-ide-nav-forward "codex-ide-nav" "\
-Move point to the next focal point in the current buffer." t)
-(autoload 'codex-ide-nav-backward "codex-ide-nav" "\
-Move point to the previous focal point in the current buffer." t)
+(autoload 'codex-ide-nav-button-forward "codex-ide-nav"
+"Move to the next focal point from a Codex-owned button." t)
+(autoload 'codex-ide-nav-button-backward "codex-ide-nav"
+"Move to the previous focal point from a Codex-owned button." t)
+(autoload 'codex-ide-nav-forward "codex-ide-nav"
+"Move point to the next focal point in the current buffer." t)
+(autoload 'codex-ide-nav-backward "codex-ide-nav"
+"Move point to the previous focal point in the current buffer." t)
 (register-definition-prefixes "codex-ide-nav" '("codex-ide-nav-"))
 
 
@@ -386,22 +377,22 @@ Move point to the previous focal point in the current buffer." t)
 
 ;;; Generated autoloads from codex-ide-transcript.el
 
-(autoload 'codex-ide-prompt "codex-ide-transcript" "\
-Prompt for a Codex message in the minibuffer and submit it from the Codex buffer." t)
-(autoload 'codex-ide-previous-prompt-history "codex-ide-transcript" "\
-Replace the current prompt with the previous prompt from history." t)
-(autoload 'codex-ide-next-prompt-history "codex-ide-transcript" "\
-Replace the current prompt with the next prompt from history." t)
-(autoload 'codex-ide-previous-prompt-line "codex-ide-transcript" "\
-Jump to the previous user prompt line in the session buffer." t)
-(autoload 'codex-ide-next-prompt-line "codex-ide-transcript" "\
-Jump to the next user prompt line in the session buffer." t)
-(autoload 'codex-ide-submit "codex-ide-transcript" "\
-Submit the current in-buffer prompt to Codex." t)
-(autoload 'codex-ide-steer "codex-ide-transcript" "\
-Submit the current prompt as steering input to the active Codex turn." t)
-(autoload 'codex-ide-queue "codex-ide-transcript" "\
-Queue the current prompt as the next Codex turn." t)
+(autoload 'codex-ide-prompt "codex-ide-transcript"
+"Prompt for a Codex message in the minibuffer and submit it from the Codex buffer." t)
+(autoload 'codex-ide-previous-prompt-history "codex-ide-transcript"
+"Replace the current prompt with the previous prompt from history." t)
+(autoload 'codex-ide-next-prompt-history "codex-ide-transcript"
+"Replace the current prompt with the next prompt from history." t)
+(autoload 'codex-ide-previous-prompt-line "codex-ide-transcript"
+"Jump to the previous user prompt line in the session buffer." t)
+(autoload 'codex-ide-next-prompt-line "codex-ide-transcript"
+"Jump to the next user prompt line in the session buffer." t)
+(autoload 'codex-ide-submit "codex-ide-transcript"
+"Submit the current in-buffer prompt to Codex." t)
+(autoload 'codex-ide-steer "codex-ide-transcript"
+"Submit the current prompt as steering input to the active Codex turn." t)
+(autoload 'codex-ide-queue "codex-ide-transcript"
+"Queue the current prompt as the next Codex turn." t)
 (register-definition-prefixes "codex-ide-transcript" '("codex-ide-"))
 
 
@@ -427,31 +418,31 @@ Queue the current prompt as the next Codex turn." t)
 
 ;;; Generated autoloads from codex-ide-session.el
 
-(autoload 'codex-ide "codex-ide-session" "\
-Start Codex for the current project or directory." t)
-(autoload 'codex-ide-continue "codex-ide-session" "\
-Resume the most recent Codex session for the current directory." t)
-(autoload 'codex-ide-show-cli-info "codex-ide-session" "\
-Report Codex CLI availability and version." t)
-(autoload 'codex-ide-stop "codex-ide-session" "\
-Stop the Codex session associated with the current session buffer." t)
-(autoload 'codex-ide-reset-current-session "codex-ide-session" "\
-Stop the current Codex session and start a new one in the same buffer." t)
-(autoload 'codex-ide-switch-to-buffer "codex-ide-session" "\
-Show the Codex buffer for the current project." t)
-(autoload 'codex-ide-interrupt "codex-ide-session" "\
-Interrupt the active Codex turn for the current project." t)
+(autoload 'codex-ide "codex-ide-session"
+"Start Codex for the current project or directory." t)
+(autoload 'codex-ide-continue "codex-ide-session"
+"Resume the most recent Codex session for the current directory." t)
+(autoload 'codex-ide-show-cli-info "codex-ide-session"
+"Report Codex CLI availability and version." t)
+(autoload 'codex-ide-stop "codex-ide-session"
+"Stop the Codex session associated with the current session buffer." t)
+(autoload 'codex-ide-reset-current-session "codex-ide-session"
+"Stop the current Codex session and start a new one in the same buffer." t)
+(autoload 'codex-ide-switch-to-buffer "codex-ide-session"
+"Show the Codex buffer for the current project." t)
+(autoload 'codex-ide-interrupt "codex-ide-session"
+"Interrupt the active Codex turn for the current project." t)
 (register-definition-prefixes "codex-ide-session" '("codex-ide--"))
 
 
 ;;; Generated autoloads from codex-ide-session-mode.el
 
-(autoload 'codex-ide-session-mode-nav-forward "codex-ide-session-mode" "\
-Move point to the next focal point in a Codex session buffer." t)
-(autoload 'codex-ide-session-mode-nav-backward "codex-ide-session-mode" "\
-Move point to the previous focal point in a Codex session buffer." t)
-(autoload 'codex-ide-session-mode "codex-ide-session-mode" "\
-Major mode for Codex app-server session buffers.
+(autoload 'codex-ide-session-mode-nav-forward "codex-ide-session-mode"
+"Move point to the next focal point in a Codex session buffer." t)
+(autoload 'codex-ide-session-mode-nav-backward "codex-ide-session-mode"
+"Move point to the previous focal point in a Codex session buffer." t)
+(autoload 'codex-ide-session-mode "codex-ide-session-mode"
+"Major mode for Codex app-server session buffers.
 
 * \\<codex-ide-session-mode-map>\\[codex-ide-submit] submits the active prompt.
 
@@ -467,7 +458,9 @@ adds these bindings:
 
 * \\<codex-ide-session-prompt-minor-mode-map>\\[codex-ide-previous-prompt-history] and \\[codex-ide-next-prompt-history] move through prompt history.
 
-(fn)" t)
+In addition to any hooks its parent mode `text-mode' might have run,
+this mode runs the hook `codex-ide-session-mode-hook', as the final or
+penultimate step during initialization." t)
 (register-definition-prefixes "codex-ide-session-mode" '("codex-ide-"))
 
 
@@ -493,8 +486,8 @@ adds these bindings:
 
 ;;; Generated autoloads from codex-ide-diff-view.el
 
-(autoload 'codex-ide-diff-open-combined-turn-buffer "codex-ide-diff-view" "\
-Open the combined diff for SESSION TURN-ID in a standalone diff buffer.
+(autoload 'codex-ide-diff-open-combined-turn-buffer "codex-ide-diff-view"
+"Open the combined diff for SESSION TURN-ID in a standalone diff buffer.
 When called interactively with nil TURN-ID, use the last transcript turn at or
 above point.  Otherwise, when TURN-ID is nil, prefer the running turn and
 otherwise use the most recent completed turn.
