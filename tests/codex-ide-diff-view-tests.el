@@ -617,39 +617,19 @@
                   "*codex[my-project]*")
                  "*codex[my-project]*-session-diff")))
 
-(ert-deftest codex-ide-session-diff-mode-header-line-shows-key-hints ()
+(ert-deftest codex-ide-session-diff-mode-does-not-set-header-line ()
   (with-temp-buffer
     (codex-ide-session-diff-mode)
-    (should (equal (substring-no-properties
-                    (codex-ide-session-diff--header-line))
-                   " [l live] [t transcript] [p pin] [g refresh] "))
-    (should (equal header-line-format
-                   '(:eval (codex-ide-session-diff--header-line))))
-    (should (eq (get-text-property
-                 0
-                 'face
-                 (codex-ide-session-diff--header-line))
-                'codex-ide-session-diff-header-face))
-    (should (equal (get 'codex-ide-session-diff-header-face
-                        'face-defface-spec)
-                   '((t :inherit codex-ide-header-line-face))))
-    (setq-local codex-ide-session-diff-source 'transcript)
-    (should (equal (substring-no-properties
-                    (codex-ide-session-diff--header-line))
-                   " [l live] [t transcript] [p pin] [g refresh] "))
-    (setq-local codex-ide-session-diff-source 'pinned)
-    (should (equal (substring-no-properties
-                    (codex-ide-session-diff--header-line))
-                   " [l live] [t transcript] [p pin] [g refresh] "))))
+    (should-not header-line-format)))
 
-(ert-deftest codex-ide-session-diff-empty-message-includes-source-controls ()
+(ert-deftest codex-ide-session-diff-empty-message-points-to-mode-help ()
   (should (equal (codex-ide-session-diff--empty-message
                   'transcript "turn-1" "No prompt at transcript position")
                  (string-join
                   '("# Codex session diff: transcript"
                     "# Turn: turn-1"
                     "# No prompt at transcript position"
-                    "# [l live] [t transcript] [p pin] [g refresh] switches diff source.")
+                    "# Press C-h m for help.")
                   "\n"))))
 
 (ert-deftest codex-ide-session-diff-open-uses-canonical-mode-and-live-source ()
@@ -682,9 +662,7 @@
             (should (derived-mode-p 'codex-ide-section-mode))
             (should (eq codex-ide-session-diff--session session))
             (should (eq codex-ide-session-diff-source 'live))
-            (should (equal (substring-no-properties
-                            (codex-ide-session-diff--header-line))
-                           " [l live] [t transcript] [p pin] [g refresh] "))
+            (should-not header-line-format)
             (should (string-match-p "foo\\.txt" (buffer-string)))))
       (when (buffer-live-p diff-buffer)
         (kill-buffer diff-buffer))
@@ -1023,7 +1001,10 @@
           (with-current-buffer diff-buffer
             (should (string-match-p
                      "No prompt at transcript position"
-                     (buffer-string)))))
+                     (buffer-string)))
+            (goto-char (point-min))
+            (should (eq (get-text-property (point) 'face)
+                        'font-lock-comment-face))))
       (when (buffer-live-p diff-buffer)
         (kill-buffer diff-buffer))
       (when (buffer-live-p session-buffer)

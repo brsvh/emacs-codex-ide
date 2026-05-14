@@ -76,11 +76,6 @@ The value is one of `live', `transcript', or `pinned'.")
 (defvar-local codex-ide-session-diff--turn-id nil
   "Turn id selected by the current session diff buffer, when any.")
 
-(defface codex-ide-session-diff-header-face
-  '((t :inherit codex-ide-header-line-face))
-  "Face used for the Codex session diff header-line label."
-  :group 'codex-ide)
-
 (defvar codex-ide-session-diff-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map codex-ide-diff-mode-map)
@@ -90,16 +85,6 @@ The value is one of `live', `transcript', or `pinned'.")
     (define-key map (kbd "p") #'codex-ide-session-diff-pin-current-turn)
     map)
   "Keymap used in canonical Codex session diff buffers.")
-
-(defun codex-ide-session-diff--controls-text ()
-  "Return compact session diff control hints."
-  "[l live] [t transcript] [p pin] [g refresh]")
-
-(defun codex-ide-session-diff--header-line ()
-  "Return the header-line text for the current session diff buffer."
-  (propertize
-   (concat " " (codex-ide-session-diff--controls-text) " ")
-   'face 'codex-ide-session-diff-header-face))
 
 (define-derived-mode codex-ide-session-diff-mode codex-ide-diff-mode
   "Codex-Session-Diff"
@@ -112,8 +97,6 @@ The value is one of `live', `transcript', or `pinned'.")
 * \\[codex-ide-session-diff-pin-current-turn] pins the diff buffer to the turn at point in the session transcript.
 
 * \\[codex-ide-session-diff-refresh] refreshes the current diff source."
-  (setq-local header-line-format
-              '(:eval (codex-ide-session-diff--header-line)))
   (setq-local mode-line-process
               '("[" (:eval (symbol-name codex-ide-session-diff-source)) "]")))
 
@@ -680,6 +663,11 @@ in the captured state are folded after the rerender."
           (unless (member path initial-paths)
             (codex-ide-section-hide section)))))))
 
+(defun codex-ide-session-diff--empty-message-p (text)
+  "Return non-nil when TEXT is a session diff empty-state message."
+  (and (stringp text)
+       (string-prefix-p "# Codex session diff: " text)))
+
 (defun codex-ide-diff--render-text-1 (raw-text display-text directory)
   "Render RAW-TEXT and DISPLAY-TEXT in the current Codex diff buffer."
   (let ((files (codex-ide-diff--group-files-by-path
@@ -696,7 +684,10 @@ in the captured state are folded after the rerender."
             (insert "\n")
             (dolist (file files)
               (codex-ide-diff--render-file file)))
-        (insert (string-trim-right display-text))
+        (insert (if (codex-ide-session-diff--empty-message-p display-text)
+                    (propertize (string-trim-right display-text)
+                                'face 'font-lock-comment-face)
+                  (string-trim-right display-text)))
         (insert "\n"))
       (setq-local buffer-read-only t)
       (set-buffer-modified-p nil)
@@ -805,8 +796,8 @@ Return the created buffer."
                (and turn-id (format "# Turn: %s" turn-id))
                (format "# %s" message)
                (concat "# "
-                       (codex-ide-session-diff--controls-text)
-                       " switches diff source.")))
+                       (substitute-command-keys
+                        "Press \\[describe-mode] for help."))))
    "\n"))
 
 (defun codex-ide-session-diff--target-turn-id (source)
