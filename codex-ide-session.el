@@ -324,11 +324,13 @@ protocol requests such as thread listing."
     (user-error "Session has no transcript buffer"))
   (if newly-created
       (codex-ide--display-new-session-buffer (codex-ide-session-buffer session))
-    (let ((codex-ide-select-window-on-open select))
-      (codex-ide-display-buffer (codex-ide-session-buffer session)
-                                (if select
-                                    codex-ide-display-buffer-pop-up-action
-                                  codex-ide--display-buffer-other-window-pop-up-action))))
+    (let* ((buffer (codex-ide-session-buffer session))
+           (already-visible-p (get-buffer-window buffer 0))
+           (action (if (or select already-visible-p)
+                       codex-ide-display-buffer-pop-up-action
+                     codex-ide--display-buffer-other-window-pop-up-action)))
+      (let ((codex-ide-select-window-on-open select))
+        (codex-ide-display-buffer buffer action))))
   (codex-ide--ensure-input-prompt session)
   session)
 

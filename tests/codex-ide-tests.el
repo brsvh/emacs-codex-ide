@@ -321,6 +321,25 @@
 						    origin-buffer))
 					(should (get-buffer-window session-buffer)))))))))
 
+(ert-deftest codex-ide-show-visible-session-buffer-without-selection-reuses-window ()
+  (let ((project-dir (codex-ide-test--make-temp-project)))
+    (codex-ide-test-with-fixture project-dir
+				 (save-window-excursion
+				   (delete-other-windows)
+				   (let ((origin-window (selected-window)))
+				     (codex-ide-test-with-fake-processes
+				      (let* ((session (codex-ide--create-process-session))
+					     (session-buffer (codex-ide-session-buffer session)))
+					(set-window-buffer origin-window session-buffer)
+					(should (eq (codex-ide--show-session-buffer
+						     session :select nil)
+						    session))
+					(should (eq (selected-window) origin-window))
+					(should (eq (window-buffer origin-window)
+						    session-buffer))
+					(should (= (length (window-list nil 'no-minibuf))
+						   1)))))))))
+
 (ert-deftest codex-ide-display-buffer-calls-display-buffer ()
   (let ((project-dir (codex-ide-test--make-temp-project))
         (remembered nil)
