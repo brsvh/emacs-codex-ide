@@ -4759,7 +4759,6 @@ Signal an error when THREAD-READ lacks replayable transcript items."
   "Record and freeze PROMPT for SESSION while a turn is running."
   (codex-ide--ensure-submittable-prompt prompt)
   (codex-ide--push-prompt-history session prompt)
-  (codex-ide--register-submitted-turn-prompt session prompt)
   (let ((payload (codex-ide--running-prompt-payload session prompt)))
     (unless (eq (current-buffer) (codex-ide-session-buffer session))
       (codex-ide--insert-input-prompt session prompt))

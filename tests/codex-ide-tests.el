@@ -3445,7 +3445,23 @@
   (ert-deftest codex-ide-submit-steers-running-turn-by-default ()
     (let ((project-dir (codex-ide-test--make-temp-project))
           (codex-ide-running-submit-action 'steer)
-          (submitted nil))
+          (submitted nil)
+          (first-diff (string-join
+                       '("diff --git a/before.txt b/before.txt"
+                         "--- a/before.txt"
+                         "+++ b/before.txt"
+                         "@@ -1 +1 @@"
+                         "-before"
+                         "+during")
+                       "\n"))
+          (second-diff (string-join
+                        '("diff --git a/after.txt b/after.txt"
+                          "--- a/after.txt"
+                          "+++ b/after.txt"
+                          "@@ -1 +1 @@"
+                          "-during"
+                          "+after")
+                        "\n")))
       (codex-ide-test-with-fixture project-dir
 				   (codex-ide-test-with-fake-processes
 				    (let ((session (codex-ide--create-process-session)))
@@ -3453,6 +3469,14 @@
 					    (codex-ide-session-current-turn-id session) "turn-steer-1"
 					    (codex-ide-session-output-prefix-inserted session) t
 					    (codex-ide-session-status session) "running")
+                                      (codex-ide--mark-current-turn-diff-started session "turn-steer-1")
+                                      (codex-ide--put-current-turn-file-change
+                                       session
+                                       "file-change-before-steer"
+                                       `((type . "fileChange")
+                                         (id . "file-change-before-steer")
+                                         (changes . (((path . "before.txt")
+                                                      (diff . ,first-diff))))))
 				      (with-current-buffer (codex-ide-session-buffer session)
 					(setq-local codex-ide--session session))
 				      (with-current-buffer (codex-ide-session-buffer session)
@@ -3469,6 +3493,18 @@
 					(should (equal (alist-get 'expectedTurnId params) "turn-steer-1"))
 					(should (string-match-p "Actually run tests first"
 								(alist-get 'text (aref input 0)))))
+                                      (codex-ide--put-current-turn-file-change
+                                       session
+                                       "file-change-after-steer"
+                                       `((type . "fileChange")
+                                         (id . "file-change-after-steer")
+                                         (changes . (((path . "after.txt")
+                                                      (diff . ,second-diff))))))
+                                      (let ((combined-diff
+                                             (codex-ide-diff-data-combined-turn-diff-text
+                                              session)))
+                                        (should (string-match-p "before\\.txt" combined-diff))
+                                        (should (string-match-p "after\\.txt" combined-diff)))
 				      (with-current-buffer (codex-ide-session-buffer session)
 					(should (codex-ide--input-prompt-active-p session))
 					(goto-char (marker-position
