@@ -103,79 +103,79 @@ thread-list limit.")
 ;;; Generated autoloads from codex-ide-mcp-bridge.el
 
 (defvar codex-ide-enable-emacs-tool-bridge nil
-  "Whether codex-ide should expose Emacs tools to Codex via MCP.
+"Whether codex-ide should expose Emacs tools to Codex via MCP.
 
 When non-nil, codex-ide starts an MCP bridge server alongside `codex app-server'
 and ensures the current Emacs instance is reachable via `emacsclient'.")
 (custom-autoload 'codex-ide-enable-emacs-tool-bridge "codex-ide-mcp-bridge" t)
 (defvar codex-ide-want-mcp-bridge 'prompt
-  "Whether codex-ide should start the Emacs MCP bridge.
+"Whether codex-ide should start the Emacs MCP bridge.
 
 When nil, do not start the bridge.  When t, start the bridge without prompting.
 When `prompt', ask before enabling the bridge, matching the historical startup
 behavior.")
 (custom-autoload 'codex-ide-want-mcp-bridge "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-tool-bridge-name "codex-ide-emacs-mcp"
-  "Name used when registering the Emacs MCP bridge with Codex.")
+"Name used when registering the Emacs MCP bridge with Codex.")
 (custom-autoload 'codex-ide-emacs-tool-bridge-name "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-python-command "python3"
-  "Python executable used to launch the standalone Emacs MCP bridge.")
+"Python executable used to launch the standalone Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-python-command "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-emacsclient-command "emacsclient"
-  "Path to the `emacsclient' executable used by the bridge.")
+"Path to the `emacsclient' executable used by the bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-emacsclient-command "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-script-path nil
-  "Path to the standalone Emacs MCP bridge script.
+"Path to the standalone Emacs MCP bridge script.
 
 When nil, codex-ide uses `bin/codex-ide-mcp-server.py' from the package directory.")
 (custom-autoload 'codex-ide-emacs-bridge-script-path "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-server-name nil
-  "Server name the bridge should use with `emacsclient'.
+"Server name the bridge should use with `emacsclient'.
 
 When nil, use the current value of `server-name'.")
 (custom-autoload 'codex-ide-emacs-bridge-server-name "codex-ide-mcp-bridge" t)
 (defvar codex-ide-suppress-server-start-prompts nil
-  "When non-nil, start the Emacs server for the bridge without prompting.
+"When non-nil, start the Emacs server for the bridge without prompting.
 
 This only affects explicit calls to `codex-ide-mcp-bridge-ensure-server'.  Session
 startup now prompts once about enabling the Emacs tool bridge, and enabling the
 bridge starts the Emacs server automatically when needed.")
 (custom-autoload 'codex-ide-suppress-server-start-prompts "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-startup-timeout 10
-  "Startup timeout in seconds for the Emacs MCP bridge.")
+"Startup timeout in seconds for the Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-startup-timeout "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-tool-timeout 60
-  "Tool-call timeout in seconds for the Emacs MCP bridge.")
+"Tool-call timeout in seconds for the Emacs MCP bridge.")
 (custom-autoload 'codex-ide-emacs-bridge-tool-timeout "codex-ide-mcp-bridge" t)
 (defvar codex-ide-emacs-bridge-require-approval nil
-  "Whether Emacs MCP bridge tool calls should require user approval.
+"Whether Emacs MCP bridge tool calls should require user approval.
 
 When nil, `codex-ide' auto-accepts approval-like MCP elicitations that clearly
 refer to the configured Emacs MCP bridge server or one of its tools.")
 (custom-autoload 'codex-ide-emacs-bridge-require-approval "codex-ide-mcp-bridge" t)
 (autoload 'codex-ide-mcp-bridge-request-exempt-from-approval-p "codex-ide-mcp-bridge"
-  "Return non-nil when PARAMS describe an Emacs MCP bridge request.
+"Return non-nil when PARAMS describe an Emacs MCP bridge request.
 
 This is used to bypass bridge-originated elicitation prompts when
 `codex-ide-emacs-bridge-require-approval' is nil.
 
 (fn PARAMS)")
 (autoload 'codex-ide-mcp-bridge-enabled-p "codex-ide-mcp-bridge"
-  "Return non-nil when the Emacs MCP bridge should be enabled.")
+"Return non-nil when the Emacs MCP bridge should be enabled.")
 (autoload 'codex-ide-mcp-bridge-enable "codex-ide-mcp-bridge"
-  "Enable the Emacs MCP bridge and ensure the target Emacs server is running.")
+"Enable the Emacs MCP bridge and ensure the target Emacs server is running.")
 (autoload 'codex-ide-mcp-bridge-disable "codex-ide-mcp-bridge"
-  "Disable the Emacs MCP bridge.")
+"Disable the Emacs MCP bridge.")
 (autoload 'codex-ide-mcp-bridge-prompt-to-enable "codex-ide-mcp-bridge"
-  "Prompt once to enable the Emacs MCP bridge for session startup.")
+"Prompt once to enable the Emacs MCP bridge for session startup.")
 (autoload 'codex-ide-mcp-bridge-status "codex-ide-mcp-bridge"
-  "Return an alist describing the current Emacs bridge configuration.")
+"Return an alist describing the current Emacs bridge configuration.")
 (autoload 'codex-ide-mcp-bridge-ensure-server "codex-ide-mcp-bridge"
-  "Ensure the target Emacs server for the bridge is running.")
+"Ensure the target Emacs server for the bridge is running.")
 (autoload 'codex-ide-mcp-bridge-mcp-config-args "codex-ide-mcp-bridge"
-  "Return `codex app-server' CLI args that register the Emacs MCP bridge.")
+"Return `codex app-server' CLI args that register the Emacs MCP bridge.")
 (autoload 'codex-ide-mcp-bridge--json-tool-call "codex-ide-mcp-bridge"
-  "Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
+"Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 
 (fn PAYLOAD)")
 (register-definition-prefixes "codex-ide-mcp-bridge" '("codex-ide-mcp-bridge--"))
@@ -272,7 +272,7 @@ Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 ;;; Generated autoloads from codex-ide-session-buffer-list.el
 
 (autoload 'codex-ide-session-buffer-list "codex-ide-session-buffer-list"
-  "Show a tabulated list of live Codex session buffers." t)
+"Show a tabulated list of live Codex session buffers." t)
 (register-definition-prefixes "codex-ide-session-buffer-list" '("codex-ide-session-buffer-list-"))
 
 
@@ -284,7 +284,7 @@ Decode JSON PAYLOAD, dispatch a bridge tool call, and return JSON.
 ;;; Generated autoloads from codex-ide-delete-session-thread.el
 
 (autoload 'codex-ide-delete-session-thread "codex-ide-delete-session-thread"
-  "Delete Codex THREAD-ID from the active `CODEX_HOME`.
+"Delete Codex THREAD-ID from the active `CODEX_HOME`.
 
 This command relies on current Codex internal storage details under
 `CODEX_HOME`, specifically the persisted rollout files under the sessions
@@ -316,7 +316,7 @@ for batch callers that already presented a single confirmation.
 ;;; Generated autoloads from codex-ide-debug-info.el
 
 (autoload 'codex-ide-show-debug-info "codex-ide-debug-info"
-  "Show a minibuffer summary of live Codex IDE session state." t)
+"Show a minibuffer summary of live Codex IDE session state." t)
 (register-definition-prefixes "codex-ide-debug-info" '("codex-ide-debug-info--"))
 
 
@@ -360,13 +360,13 @@ while 1 would fully replace the background with the foreground color.")
 ;;; Generated autoloads from codex-ide-nav.el
 
 (autoload 'codex-ide-nav-button-forward "codex-ide-nav"
-  "Move to the next focal point from a Codex-owned button." t)
+"Move to the next focal point from a Codex-owned button." t)
 (autoload 'codex-ide-nav-button-backward "codex-ide-nav"
-  "Move to the previous focal point from a Codex-owned button." t)
+"Move to the previous focal point from a Codex-owned button." t)
 (autoload 'codex-ide-nav-forward "codex-ide-nav"
-  "Move point to the next focal point in the current buffer." t)
+"Move point to the next focal point in the current buffer." t)
 (autoload 'codex-ide-nav-backward "codex-ide-nav"
-  "Move point to the previous focal point in the current buffer." t)
+"Move point to the previous focal point in the current buffer." t)
 (register-definition-prefixes "codex-ide-nav" '("codex-ide-nav-"))
 
 
@@ -506,11 +506,11 @@ otherwise use the most recent completed turn.
 
 (register-definition-prefixes "codex-ide-rollout" '("codex-ide-rollout-"))
 
-
 
 ;;; Generated autoloads from codex-ide-thread-history.el
 
 (register-definition-prefixes "codex-ide-thread-history" '("codex-ide--"))
+
 
 ;;; End of scraped data
 

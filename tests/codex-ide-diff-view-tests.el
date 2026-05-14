@@ -555,6 +555,20 @@
     (should (equal (codex-ide-diff--source-location-for-line diff-text 5)
                    '(:path "foo.txt" :line 4)))))
 
+(ert-deftest codex-ide-diff-source-location-resolves-body-only-new-file ()
+  (let ((diff-text
+         (string-join
+          '("diff --git a/foo.txt b/foo.txt"
+            "--- /dev/null"
+            "+++ b/foo.txt"
+            "first"
+            "second")
+          "\n")))
+    (should (equal (codex-ide-diff--source-location-for-line diff-text 3)
+                   '(:path "foo.txt" :line 1)))
+    (should (equal (codex-ide-diff--source-location-for-line diff-text 4)
+                   '(:path "foo.txt" :line 2)))))
+
 (ert-deftest codex-ide-diff-goto-source-resolves-project-relative-header ()
   (let* ((root (file-name-as-directory
                 (make-temp-file "codex-ide-diff-view-" t)))
