@@ -146,6 +146,12 @@ Key bindings in `codex-ide-session-diff-mode`:
 - `RET` jumps from a diff line to the corresponding source file location when
   Codex IDE can resolve it.
 
+When a session diff buffer refreshes, Codex IDE preserves the expanded or
+collapsed state of existing file and hunk sections. Newly added file sections
+start expanded while all existing file sections are expanded; if any existing
+file section is collapsed, new file sections start collapsed as well. Customize
+`codex-ide-diff-new-file-section-fold-predicate` to change this policy.
+
 The session diff buffer is separate from static turn diff buffers. Use the
 session diff when you want an automatically updating view; use a turn-specific
 diff when you want a snapshot.
