@@ -2999,6 +2999,13 @@ CONTEXT is either nil for ordinary transcript rendering or `approval'."
        "Exited review mode")
       (_ nil))))
 
+(defun codex-ide--command-cwd-detail-visible-p (session cwd)
+  "Return non-nil when CWD should be rendered for SESSION."
+  (let ((session-directory (and session (codex-ide-session-directory session))))
+    (or (not session-directory)
+        (not (equal (codex-ide--normalize-directory cwd)
+                    (codex-ide--normalize-directory session-directory))))))
+
 (defun codex-ide--render-item-start-details (session item)
   "Render detail lines for ITEM in SESSION."
   (let ((buffer (codex-ide-session-buffer session))
@@ -3010,7 +3017,8 @@ CONTEXT is either nil for ordinary transcript rendering or `approval'."
          (codex-ide--append-shell-command-detail
           buffer
           (codex-ide--display-command-string (alist-get 'command item))))
-       (when-let* ((cwd (alist-get 'cwd item)))
+       (when-let* ((cwd (alist-get 'cwd item))
+                   ((codex-ide--command-cwd-detail-visible-p session cwd)))
          (codex-ide--append-agent-text
           buffer
           (codex-ide--item-detail-line

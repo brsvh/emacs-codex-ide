@@ -843,6 +843,47 @@
                   (codex-ide-session-input-prompt-start-marker session)))
       (should (equal (codex-ide-test--prompt-prefix-at-line) "> ")))))
 
+(ert-deftest codex-ide-command-execution-omits-session-cwd-detail ()
+  (let ((project-dir (codex-ide-test--make-temp-project)))
+    (with-temp-buffer
+      (codex-ide-session-mode)
+      (let ((session (make-codex-ide-session
+                      :buffer (current-buffer)
+                      :directory (codex-ide--normalize-directory project-dir)
+                      :status "idle"
+                      :item-states (make-hash-table :test 'equal))))
+        (setq-local codex-ide--session session)
+        (codex-ide--render-item-start
+         session
+         `((id . "call-1")
+           (type . "commandExecution")
+           (command . "echo hi")
+           (cwd . ,(file-name-as-directory project-dir))))
+        (should (string-match-p "\\* Ran command" (buffer-string)))
+        (should-not (string-match-p "cwd:" (buffer-string)))))))
+
+(ert-deftest codex-ide-command-execution-renders-different-cwd-detail ()
+  (let ((project-dir (codex-ide-test--make-temp-project))
+        (command-dir (make-temp-file "codex-ide-command-cwd-" t)))
+    (with-temp-buffer
+      (codex-ide-session-mode)
+      (let ((session (make-codex-ide-session
+                      :buffer (current-buffer)
+                      :directory (codex-ide--normalize-directory project-dir)
+                      :status "idle"
+                      :item-states (make-hash-table :test 'equal))))
+        (setq-local codex-ide--session session)
+        (codex-ide--render-item-start
+         session
+         `((id . "call-1")
+           (type . "commandExecution")
+           (command . "echo hi")
+           (cwd . ,command-dir)))
+        (should (string-match-p
+                 (regexp-quote
+                  (format "cwd: %s" (abbreviate-file-name command-dir)))
+                 (buffer-string)))))))
+
 (ert-deftest codex-ide-running-input-stays-below-streamed-agent-deltas ()
   (with-temp-buffer
     (codex-ide-session-mode)
