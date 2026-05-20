@@ -7109,6 +7109,20 @@
              "/tmp/folder%20with%20spaces/main.c")
             '("/tmp/folder with spaces/main.c" nil nil))))
 
+  (ert-deftest codex-ide-parse-file-link-target-keeps-encoded-delimiters-in-path ()
+    (should
+     (equal (codex-ide-renderer-parse-file-link-target
+             "/tmp/path/to%3Adir%23X/my-file%23L3#L1")
+            '("/tmp/path/to:dir#X/my-file#L3" 1 nil)))
+    (should
+     (equal (codex-ide-renderer-parse-file-link-target
+             "/tmp/path/to%3Adir%23X/other-file%3A2#L1")
+            '("/tmp/path/to:dir#X/other-file:2" 1 nil)))
+    (should
+     (equal (codex-ide-renderer-parse-file-link-target
+             "/tmp/path/to%3Adir%23X/other-file%3A2")
+            '("/tmp/path/to:dir#X/other-file:2" nil nil))))
+
   (ert-deftest codex-ide-parse-file-link-target-ignores-permissive-wrappers ()
     (should
      (equal (codex-ide-renderer-parse-file-link-target "</tmp/foo.txt>")
@@ -7179,6 +7193,42 @@
                 (should (button-at pos))
                 (should (equal (get-text-property pos 'codex-ide-path) file-path))
                 (should-not (string-match-p "%20" (buffer-string))))))
+        (when (file-directory-p project-dir)
+          (delete-directory project-dir t)))))
+
+  (ert-deftest codex-ide-render-markdown-region-renders-file-links-with-encoded-delimiters ()
+    (let* ((project-dir (make-temp-file "codex-ide-tests encoded-" t))
+           (directory (expand-file-name "path/to:dir#X" project-dir))
+           (hash-file (expand-file-name "my-file#L3" directory))
+           (colon-file (expand-file-name "other-file:2" directory)))
+      (unwind-protect
+          (progn
+            (make-directory directory t)
+            (with-temp-file hash-file
+              (insert "hash file\n"))
+            (with-temp-file colon-file
+              (insert "colon file\n"))
+            (with-temp-buffer
+              (insert (format "[`my-file#L3` line 1](%s#L1)\n"
+                              (replace-regexp-in-string
+                               "#" "%23"
+                               (replace-regexp-in-string ":" "%3A" hash-file))))
+              (insert (format "[`other-file:2` line 1](%s#L1)\n"
+                              (replace-regexp-in-string
+                               "#" "%23"
+                               (replace-regexp-in-string ":" "%3A" colon-file))))
+              (codex-ide-renderer-render-markdown-region (point-min) (point-max))
+              (goto-char (point-min))
+              (search-forward "my-file#L3")
+              (let ((pos (1- (point))))
+                (should (button-at pos))
+                (should (equal (get-text-property pos 'codex-ide-path) hash-file))
+                (should (= (get-text-property pos 'codex-ide-line) 1)))
+              (search-forward "other-file:2")
+              (let ((pos (1- (point))))
+                (should (button-at pos))
+                (should (equal (get-text-property pos 'codex-ide-path) colon-file))
+                (should (= (get-text-property pos 'codex-ide-line) 1)))))
         (when (file-directory-p project-dir)
           (delete-directory project-dir t)))))
 
