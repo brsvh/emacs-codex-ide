@@ -4326,6 +4326,35 @@
 							text))
 						     messages))))))))
 
+  (ert-deftest codex-ide-reported-workspace-write-cwd-root-match-is-normalized ()
+    (let* ((project-dir (codex-ide-test--make-temp-project))
+           (session (codex-ide-session :directory project-dir))
+           (submitted
+            `((sandboxPolicy
+               . ((type . "workspaceWrite")
+                  (writableRoots . [,project-dir])))))
+           (reported
+            '((sandboxPolicy
+               . ((type . "workspaceWrite")
+                  (writableRoots)
+                  (networkAccess . :json-false)
+                  (excludeTmpdirEnvVar . :json-false)
+                  (excludeSlashTmp . :json-false))))))
+      (should-not
+       (codex-ide--turn-config-mismatches submitted reported session))))
+
+  (ert-deftest codex-ide-reported-sandbox-type-mismatch-is-not-normalized-away ()
+    (let* ((project-dir (codex-ide-test--make-temp-project))
+           (session (codex-ide-session :directory project-dir))
+           (submitted
+            `((sandboxPolicy
+               . ((type . "workspaceWrite")
+                  (writableRoots . [,project-dir])))))
+           (reported
+            '((sandboxPolicy . ((type . "readOnly"))))))
+      (should
+       (codex-ide--turn-config-mismatches submitted reported session))))
+
   (ert-deftest codex-ide-header-line-uses-updated-compact-format ()
     (let* ((project-dir (codex-ide-test--make-temp-project))
            (file-path

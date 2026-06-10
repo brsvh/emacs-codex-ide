@@ -5138,16 +5138,94 @@ compatibility with older app-server payloads and global notifications."
                        'personality)))
            (cons 'personality personality)))))
 
-(defun codex-ide--turn-config-mismatches (submitted reported)
+(defun codex-ide--normalize-sandbox-policy-path (path)
+  "Return a canonical string for sandbox policy PATH."
+  (and (stringp path)
+       (directory-file-name (expand-file-name path))))
+
+(defun codex-ide--normalize-sandbox-policy-roots (roots session)
+  "Return canonical ROOTS, omitting SESSION's implicit workspace root."
+  (let* ((workspace-root
+          (codex-ide--normalize-sandbox-policy-path
+           (and session (codex-ide-session-directory session))))
+         (root-list (cond
+                     ((vectorp roots) (append roots nil))
+                     ((listp roots) roots)
+                     ((stringp roots) (list roots))))
+         (normalized
+          (delq nil
+                (mapcar #'codex-ide--normalize-sandbox-policy-path
+                        root-list))))
+    (seq-filter
+     (lambda (root)
+       (not (equal root workspace-root)))
+     normalized)))
+
+(defun codex-ide--normalize-sandbox-policy-flag (policy key)
+  "Return non-nil when POLICY has KEY set to a truthy JSON value."
+  (let ((value (alist-get key policy)))
+    (and value (not (eq value :json-false)))))
+
+(defun codex-ide--normalize-sandbox-policy-for-comparison (policy session)
+  "Return POLICY in a canonical form for config mismatch comparison.
+
+App-server reports some sandbox defaults explicitly and treats the thread cwd
+as an implicit workspace root.  Normalize those representation differences so
+the mismatch warning only reflects meaningful behavior changes."
+  (if (not (listp policy))
+      policy
+    (let* ((type (alist-get 'type policy))
+           (roots (codex-ide--normalize-sandbox-policy-roots
+                   (alist-get 'writableRoots policy)
+                   session))
+           (network-access
+            (codex-ide--normalize-sandbox-policy-flag policy 'networkAccess))
+           (exclude-tmpdir-env-var
+            (codex-ide--normalize-sandbox-policy-flag
+             policy
+             'excludeTmpdirEnvVar))
+           (exclude-slash-tmp
+            (codex-ide--normalize-sandbox-policy-flag
+             policy
+             'excludeSlashTmp)))
+      (delq nil
+            `((type . ,type)
+              ,@(when (equal type "workspaceWrite")
+                  `((writableRoots . ,roots)))
+              ,@(when network-access
+                  '((networkAccess . t)))
+              ,@(when exclude-tmpdir-env-var
+                  '((excludeTmpdirEnvVar . t)))
+              ,@(when exclude-slash-tmp
+                  '((excludeSlashTmp . t))))))))
+
+(defun codex-ide--normalize-turn-config-value (key value session)
+  "Return config VALUE for KEY normalized for comparison in SESSION."
+  (pcase key
+    ('sandboxPolicy
+     (codex-ide--normalize-sandbox-policy-for-comparison value session))
+    (_ value)))
+
+(defun codex-ide--turn-config-mismatches (submitted reported &optional session)
   "Return settings where REPORTED disagrees with SUBMITTED."
   (delq nil
         (mapcar
          (lambda (entry)
            (let* ((key (car entry))
                   (submitted-value (cdr entry))
-                  (reported-value (alist-get key reported)))
+                  (reported-value (alist-get key reported))
+                  (normalized-submitted
+                   (codex-ide--normalize-turn-config-value
+                    key
+                    submitted-value
+                    session))
+                  (normalized-reported
+                   (codex-ide--normalize-turn-config-value
+                    key
+                    reported-value
+                    session)))
              (when (and reported-value
-                        (not (equal submitted-value reported-value)))
+                        (not (equal normalized-submitted normalized-reported)))
                (list key submitted-value reported-value))))
          submitted)))
 
@@ -5169,7 +5247,10 @@ compatibility with older app-server payloads and global notifications."
                           session
                           :submitted-turn-config)))
     (let* ((reported (codex-ide--reported-turn-config payload))
-           (mismatches (codex-ide--turn-config-mismatches submitted reported))
+           (mismatches (codex-ide--turn-config-mismatches
+                        submitted
+                        reported
+                        session))
            (previous (codex-ide--session-metadata-get
                       session
                       :submitted-turn-config-mismatch)))
