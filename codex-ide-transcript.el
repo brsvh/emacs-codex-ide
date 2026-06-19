@@ -51,6 +51,7 @@
 (require 'codex-ide-mcp-elicitation)
 (require 'codex-ide-nav)
 (require 'codex-ide-renderer)
+(require 'codex-ide-slash-command)
 (require 'codex-ide-thread-history)
 (require 'codex-ide-usage)
 (require 'codex-ide-window)
@@ -60,6 +61,8 @@
 (declare-function codex-ide--show-session-buffer "codex-ide-session"
                   (session &key newly-created select))
 (declare-function codex-ide--sync-prompt-minor-mode "codex-ide-session-mode" (&optional session))
+(declare-function codex-ide-session-mode-sync-slash-command-minor-mode
+                  "codex-ide-session-mode" (&optional session))
 (declare-function codex-ide-session-mode-sync-approval-minor-mode
                   "codex-ide-session-mode" (&optional session))
 (declare-function codex-ide-config-effective-value "codex-ide-config" (key &optional session))
@@ -6703,6 +6706,143 @@ LOCAL-IMAGES and IMAGE-DETAIL are forwarded to the queued turn payload."
      (length prompt-to-send))
     (message "Queued prompt for the next Codex turn")))
 
+(defun codex-ide--slash-command-detail-line (session text)
+  "Append slash command detail TEXT to SESSION's transcript."
+  (when (and (stringp text)
+             (not (string-empty-p text)))
+    (codex-ide--append-agent-text
+     (codex-ide-session-buffer session)
+     (codex-ide--item-detail-line text)
+     'codex-ide-item-detail-face)))
+
+(defun codex-ide--append-slash-command-start (session entry)
+  "Append a slash command start block for ENTRY to SESSION's transcript."
+  (let ((buffer (codex-ide-session-buffer session)))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (let* ((restore-point (codex-ide--input-point-marker session))
+               (active-boundary (codex-ide--active-input-boundary-marker buffer))
+               (insertion-position (codex-ide--transcript-insertion-position buffer))
+               (advance-active-boundary
+                (and active-boundary
+                     (= insertion-position (marker-position active-boundary)))))
+          (codex-ide--with-transcript-render-transaction-at
+              (session buffer insertion-position)
+            (codex-ide--maybe-save-transcript-position
+                insertion-position
+              (codex-ide-renderer-append-to-buffer
+               ""
+               :insertion-point insertion-position
+               :restore-point restore-point
+               :preserve-point t
+               :after-insert
+               (lambda (_start _end inserted-at)
+                 (goto-char inserted-at)
+                 (codex-ide-renderer-insert-output-spacing)
+                 (codex-ide-renderer-insert-read-only "\n")
+                 (codex-ide-renderer-insert-read-only
+                  "* Running slash-command\n"
+                  'codex-ide-item-summary-face)
+                 (let ((range
+                        (codex-ide-renderer-insert-read-only
+                         (codex-ide--item-detail-line
+                          (symbol-name
+                           (codex-ide-slash-command-entry-command entry)))
+                         'codex-ide-item-detail-face)))
+                   (codex-ide--finish-transcript-append
+                    buffer
+                    inserted-at
+                    (cdr range)
+                    active-boundary
+                    advance-active-boundary
+                    session)))))))))))
+
+(defun codex-ide--record-slash-command-message (session text)
+  "Record slash command message TEXT in SESSION's transcript."
+  (when (stringp text)
+    (dolist (line (split-string (string-trim-right text) "\n"))
+      (unless (string-empty-p (string-trim line))
+        (codex-ide--slash-command-detail-line session line)))))
+
+(defun codex-ide--slash-command-block-trailing-spacing (session)
+  "Append trailing spacing after SESSION's slash command block."
+  (codex-ide--append-agent-text
+   (codex-ide-session-buffer session)
+   "\n"))
+
+(defun codex-ide--format-captured-message (format-string args)
+  "Return message text for FORMAT-STRING and ARGS, or nil."
+  (when (stringp format-string)
+    (apply #'format-message format-string args)))
+
+(defmacro codex-ide--with-slash-command-message-capture (session &rest body)
+  "Run BODY while appending emitted messages to SESSION's transcript."
+  (declare (indent 1))
+  `(let ((orig-message (symbol-function 'message))
+         (orig-minibuffer-message (symbol-function 'minibuffer-message)))
+     (cl-letf (((symbol-function 'message)
+                (lambda (format-string &rest args)
+                  (when-let* ((text (codex-ide--format-captured-message
+                                      format-string
+                                      args)))
+                    (codex-ide--record-slash-command-message ,session text))
+                  (apply orig-message format-string args)))
+               ((symbol-function 'minibuffer-message)
+                (lambda (format-string &rest args)
+                  (when-let* ((text (codex-ide--format-captured-message
+                                      format-string
+                                      args)))
+                    (codex-ide--record-slash-command-message ,session text))
+                  (apply orig-minibuffer-message format-string args))))
+       ,@body)))
+
+(defun codex-ide--restore-input-prompt-after-slash-command (session)
+  "Restore SESSION's empty input prompt after a slash command completes."
+  (let ((buffer (codex-ide-session-buffer session)))
+    (when (buffer-live-p buffer)
+      (with-current-buffer buffer
+        (unless (codex-ide--input-prompt-active-p session)
+          (codex-ide--insert-input-prompt session nil))
+        (codex-ide-session-mode-sync-slash-command-minor-mode session)))))
+
+(defun codex-ide--submit-slash-command (session prompt)
+  "Submit PROMPT as a slash command for SESSION when applicable.
+Return non-nil when PROMPT was a slash command."
+  (when-let* ((entry (codex-ide-slash-command-resolve-prompt prompt)))
+    (let ((buffer (codex-ide-session-buffer session)))
+      (unless (buffer-live-p buffer)
+        (user-error "Current Codex session buffer is no longer live"))
+      (condition-case err
+          (progn
+            (with-current-buffer buffer
+              (unless (codex-ide--input-prompt-active-p session)
+                (codex-ide--insert-input-prompt session prompt))
+              (codex-ide--freeze-active-input-prompt session)
+              (codex-ide--append-slash-command-start session entry))
+            (with-current-buffer buffer
+              (codex-ide--with-slash-command-message-capture session
+                (codex-ide-slash-command-execute-entry entry)))
+            (codex-ide--slash-command-detail-line session "Success")
+            (codex-ide--slash-command-block-trailing-spacing session)
+            (codex-ide--restore-input-prompt-after-slash-command session)
+            t)
+        (quit
+         (codex-ide--slash-command-detail-line session "Interrupted")
+         (codex-ide--slash-command-block-trailing-spacing session)
+         (codex-ide--restore-input-prompt-after-slash-command session)
+         (signal (car err) (cdr err)))
+        (error
+         (codex-ide--slash-command-detail-line
+          session
+          (format "Failed: %s" (error-message-string err)))
+         (codex-ide--slash-command-block-trailing-spacing session)
+         (codex-ide-log-message
+          session
+          "Slash command submission failed: %s"
+          (error-message-string err))
+         (codex-ide--reopen-input-after-submit-error session prompt err)
+         (signal (car err) (cdr err)))))))
+
 (defun codex-ide--submit-prompt (&optional prompt local-images image-detail)
   "Submit PROMPT to the current Codex session.
 
@@ -6722,52 +6862,54 @@ IMAGE-DETAIL, when non-nil, is forwarded to each image input item."
         (progn
           (codex-ide--ensure-busy-session-submission-origin session)
           (setq prompt-to-send (codex-ide--prompt-for-submission session prompt))
-          (pcase codex-ide-running-submit-action
-            ('queue (codex-ide--queue-prompt
-                     prompt-to-send
-                     local-images
-                     image-detail))
-            (_ (codex-ide--steer-prompt
-                prompt-to-send
-                local-images
-                image-detail))))
+          (unless (codex-ide--submit-slash-command session prompt-to-send)
+            (pcase codex-ide-running-submit-action
+              ('queue (codex-ide--queue-prompt
+                       prompt-to-send
+                       local-images
+                       image-detail))
+              (_ (codex-ide--steer-prompt
+                  prompt-to-send
+                  local-images
+                  image-detail)))))
       (setq prompt-to-send (codex-ide--prompt-for-submission session prompt))
-      (unless thread-id
-        (user-error "Codex session has no active thread"))
-      (codex-ide--ensure-submittable-prompt
-       prompt-to-send
-       effective-local-images)
-      (codex-ide--push-prompt-history session prompt-to-send)
-      (codex-ide--register-submitted-turn-prompt session prompt-to-send)
-      (codex-ide-log-message
-       session
-       "Sending prompt to thread %s (%d chars)"
-       thread-id
-       (length prompt-to-send))
-      (unless (eq (current-buffer) (codex-ide-session-buffer session))
-        (codex-ide--insert-input-prompt session prompt-to-send))
-      (setq payload
-            (with-current-buffer (codex-ide-session-buffer session)
-              (codex-ide--compose-turn-payload
-               prompt-to-send
-               :local-images effective-local-images
-               :image-detail effective-image-detail)))
-      (codex-ide--begin-turn-display
-       session
-       (alist-get 'context-summary payload)
-       nil
-       effective-local-images)
-      (redisplay)
-      (condition-case err
-          (progn
-            (codex-ide--send-turn-start session thread-id payload)
-            (codex-ide--after-turn-start-submitted session payload)
-            (when pending-local-images
-              (codex-ide--clear-pending-local-images session)))
-        (error
-         (codex-ide-log-message session "Prompt submission failed: %s" (error-message-string err))
-         (codex-ide--reopen-input-after-submit-error session prompt-to-send err)
-         (signal (car err) (cdr err)))))))
+      (unless (codex-ide--submit-slash-command session prompt-to-send)
+        (unless thread-id
+          (user-error "Codex session has no active thread"))
+        (codex-ide--ensure-submittable-prompt
+         prompt-to-send
+         effective-local-images)
+        (codex-ide--push-prompt-history session prompt-to-send)
+        (codex-ide--register-submitted-turn-prompt session prompt-to-send)
+        (codex-ide-log-message
+         session
+         "Sending prompt to thread %s (%d chars)"
+         thread-id
+         (length prompt-to-send))
+        (unless (eq (current-buffer) (codex-ide-session-buffer session))
+          (codex-ide--insert-input-prompt session prompt-to-send))
+        (setq payload
+              (with-current-buffer (codex-ide-session-buffer session)
+                (codex-ide--compose-turn-payload
+                 prompt-to-send
+                 :local-images effective-local-images
+                 :image-detail effective-image-detail)))
+        (codex-ide--begin-turn-display
+         session
+         (alist-get 'context-summary payload)
+         nil
+         effective-local-images)
+        (redisplay)
+        (condition-case err
+            (progn
+              (codex-ide--send-turn-start session thread-id payload)
+              (codex-ide--after-turn-start-submitted session payload)
+              (when pending-local-images
+                (codex-ide--clear-pending-local-images session)))
+          (error
+           (codex-ide-log-message session "Prompt submission failed: %s" (error-message-string err))
+           (codex-ide--reopen-input-after-submit-error session prompt-to-send err)
+           (signal (car err) (cdr err))))))))
 
 ;;;###autoload
 (defun codex-ide-submit ()

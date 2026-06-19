@@ -514,6 +514,13 @@ penultimate step during initialization." t)
 
 ;;; Generated autoloads from codex-ide-config.el
 
+(autoload 'codex-ide-set-model-and-reasoning-effort "codex-ide-config"
+"Prompt for a Codex model, then prompt for reasoning effort, and apply both.
+When MODEL is an empty string, clear the configured model.  SESSION defaults to
+the session associated with the current buffer.  Interactively, prompt for the
+target scope after reading both values.
+
+(fn &optional MODEL REASONING-EFFORT SCOPE SESSION)" t)
 (register-definition-prefixes "codex-ide-config" '("codex-ide-config-"))
 
 

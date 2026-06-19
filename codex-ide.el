@@ -305,6 +305,7 @@ thread-list limit."
 (require 'codex-ide-context)
 (require 'codex-ide-nav)
 (require 'codex-ide-renderer)
+(require 'codex-ide-slash-command)
 (require 'codex-ide-session-mode)
 (require 'codex-ide-protocol)
 (require 'codex-ide-header)
